@@ -82,3 +82,49 @@ generator and tests.
 `round()`, which rounds halves to even (`round(4.5) == 4`), so the split sizes
 did not match the intended "nearest whole print". A test caught it
 (`test_split_no_training_prints_left`); fixed by rounding halves up.
+
+---
+
+## 2026-10-25: Hand-crafted features and baseline classifiers
+
+**Task.** Write the NumPy feature module and the logistic regression / random
+forest baseline from CLAUDE.md, with known-answer tests.
+
+**What the AI did**
+- `src/fdm_defect/features.py`: 43 features per image: 16-bin grey
+  histogram, RGB mean/std, Sobel gradient stats (mean/std magnitude, mean
+  |gx|, mean |gy|, edge density), 10-bin uniform LBP histogram (8 neighbours,
+  radius 1), GLCM contrast/homogeneity/energy/correlation (8 levels, offsets
+  right and down, symmetric), and 2-D FFT peak fraction and peak frequency.
+  All implemented in NumPy only, with input validation.
+- `src/fdm_defect/baseline.py`: `StandardScaler` + `LogisticRegression` and
+  `RandomForestClassifier` (300 trees, `min_samples_leaf=5`), both
+  `class_weight="balanced"`; `fit_baseline`, `predict_proba`,
+  `compute_features`.
+- `scripts/run_baseline.py`: trains on the train split and reports validation
+  metrics (test split not used).
+- `tests/test_features.py`, `tests/test_baseline.py`: 54 new tests.
+- Added scikit-learn 1.9.1 as a dependency.
+
+**What was kept / changed.** All kept. Design choices to be able to justify:
+Sobel uses a "valid" convolution (borders dropped, no padding); LBP uses the
+square 3x3 ring rather than interpolated circle points; GLCM energy follows
+the scikit-image convention (square root of the angular second moment);
+correlation is defined as 1 for a constant image.
+
+**How it was checked**
+- Known-answer tests: Sobel on a ramp g = s x gives gx = 8 s; a pure cosine
+  puts 0.5 of non-DC power in its peak FFT bin at frequency k/N; a two-level
+  checkerboard gives GLCM contrast (L - 1)^2, homogeneity 1/(1 + (L - 1)^2),
+  energy sqrt(0.5), correlation -1; plus hand-worked LBP patterns, a step
+  edge's edge density (2/6), and histogram endpoints.
+- `pytest`: 113 passed.
+- Real data (`run_baseline.py`, 128 px, seed 42), validation split, per
+  image at threshold 0.5: logistic regression recall 0.710, ROC-AUC 0.715;
+  random forest recall 0.715, ROC-AUC 0.798. Feature extraction 5.9 ms/image.
+  Validation has only 8 prints, so these are noisy.
+
+**AI errors found.** The first random-forest reproducibility test compared
+probabilities for exact equality and failed by 2e-16: with `n_jobs=-1`,
+per-tree probabilities are summed in thread order, so the last bit can vary.
+The fitted trees are identical; the test now uses a 1e-12 relative tolerance.
