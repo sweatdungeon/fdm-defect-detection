@@ -61,6 +61,9 @@
                     <a class="function" href="#validate_metadata">validate_metadata</a>
             </li>
             <li>
+                    <a class="function" href="#make_subset">make_subset</a>
+            </li>
+            <li>
                     <a class="function" href="#load_image">load_image</a>
             </li>
             <li>
@@ -322,185 +325,232 @@ validation or test, never individual images.</p>
 </span><span id="L-182"><a href="#L-182"><span class="linenos">182</span></a>    <span class="k">return</span> <span class="n">df</span>
 </span><span id="L-183"><a href="#L-183"><span class="linenos">183</span></a>
 </span><span id="L-184"><a href="#L-184"><span class="linenos">184</span></a>
-</span><span id="L-185"><a href="#L-185"><span class="linenos">185</span></a><span class="k">def</span><span class="w"> </span><span class="nf">load_image</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">DEFAULT_IMAGE_SIZE</span><span class="p">):</span>
-</span><span id="L-186"><a href="#L-186"><span class="linenos">186</span></a><span class="w">    </span><span class="sd">"""Load one image as a square RGB array scaled to [0, 1].</span>
+</span><span id="L-185"><a href="#L-185"><span class="linenos">185</span></a><span class="k">def</span><span class="w"> </span><span class="nf">make_subset</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">frames_per_print</span><span class="o">=</span><span class="mi">120</span><span class="p">):</span>
+</span><span id="L-186"><a href="#L-186"><span class="linenos">186</span></a><span class="w">    </span><span class="sd">"""Select up to ``frames_per_print`` evenly spaced frames from every print.</span>
 </span><span id="L-187"><a href="#L-187"><span class="linenos">187</span></a>
-</span><span id="L-188"><a href="#L-188"><span class="linenos">188</span></a><span class="sd">    Parameters</span>
-</span><span id="L-189"><a href="#L-189"><span class="linenos">189</span></a><span class="sd">    ----------</span>
-</span><span id="L-190"><a href="#L-190"><span class="linenos">190</span></a><span class="sd">    path : str or Path</span>
-</span><span id="L-191"><a href="#L-191"><span class="linenos">191</span></a><span class="sd">        JPEG or PNG file. Greyscale and RGBA images are converted to RGB.</span>
-</span><span id="L-192"><a href="#L-192"><span class="linenos">192</span></a><span class="sd">    size : int, default ``config.DEFAULT_IMAGE_SIZE``</span>
-</span><span id="L-193"><a href="#L-193"><span class="linenos">193</span></a><span class="sd">        Output side length in pixels; the image is resized (bilinear) to</span>
-</span><span id="L-194"><a href="#L-194"><span class="linenos">194</span></a><span class="sd">        ``size x size`` without preserving aspect ratio.</span>
+</span><span id="L-188"><a href="#L-188"><span class="linenos">188</span></a><span class="sd">    This is how ``data/train_subset.csv`` was made from the competition's</span>
+</span><span id="L-189"><a href="#L-189"><span class="linenos">189</span></a><span class="sd">    ``train.csv``. Rows are sorted by ``img_path`` (which orders each print's</span>
+</span><span id="L-190"><a href="#L-190"><span class="linenos">190</span></a><span class="sd">    frames by timestamp) and grouped by ``print_id``. For a print with ``n``</span>
+</span><span id="L-191"><a href="#L-191"><span class="linenos">191</span></a><span class="sd">    frames, the row positions ``np.linspace(0, n - 1, min(frames_per_print, n))``</span>
+</span><span id="L-192"><a href="#L-192"><span class="linenos">192</span></a><span class="sd">    are rounded to integers and deduplicated. Note that ``np.round`` rounds</span>
+</span><span id="L-193"><a href="#L-193"><span class="linenos">193</span></a><span class="sd">    halves to even (4.5 -&gt; 4), which the committed subset relies on. Prints are</span>
+</span><span id="L-194"><a href="#L-194"><span class="linenos">194</span></a><span class="sd">    concatenated in ``print_id`` order.</span>
 </span><span id="L-195"><a href="#L-195"><span class="linenos">195</span></a>
-</span><span id="L-196"><a href="#L-196"><span class="linenos">196</span></a><span class="sd">    Returns</span>
-</span><span id="L-197"><a href="#L-197"><span class="linenos">197</span></a><span class="sd">    -------</span>
-</span><span id="L-198"><a href="#L-198"><span class="linenos">198</span></a><span class="sd">    numpy.ndarray</span>
-</span><span id="L-199"><a href="#L-199"><span class="linenos">199</span></a><span class="sd">        Array of shape ``(size, size, 3)``, dtype float32, values in [0, 1].</span>
-</span><span id="L-200"><a href="#L-200"><span class="linenos">200</span></a>
-</span><span id="L-201"><a href="#L-201"><span class="linenos">201</span></a><span class="sd">    Raises</span>
-</span><span id="L-202"><a href="#L-202"><span class="linenos">202</span></a><span class="sd">    ------</span>
-</span><span id="L-203"><a href="#L-203"><span class="linenos">203</span></a><span class="sd">    TypeError</span>
-</span><span id="L-204"><a href="#L-204"><span class="linenos">204</span></a><span class="sd">        If ``size`` is not an integer.</span>
-</span><span id="L-205"><a href="#L-205"><span class="linenos">205</span></a><span class="sd">    ValueError</span>
-</span><span id="L-206"><a href="#L-206"><span class="linenos">206</span></a><span class="sd">        If ``size`` is not positive or the file is not a readable image.</span>
-</span><span id="L-207"><a href="#L-207"><span class="linenos">207</span></a><span class="sd">    FileNotFoundError</span>
-</span><span id="L-208"><a href="#L-208"><span class="linenos">208</span></a><span class="sd">        If ``path`` does not exist.</span>
-</span><span id="L-209"><a href="#L-209"><span class="linenos">209</span></a><span class="sd">    """</span>
-</span><span id="L-210"><a href="#L-210"><span class="linenos">210</span></a>    <span class="c1"># bool is a subclass of int, but size=True is certainly a mistake.</span>
-</span><span id="L-211"><a href="#L-211"><span class="linenos">211</span></a>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-</span><span id="L-212"><a href="#L-212"><span class="linenos">212</span></a>        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"size must be an integer, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">size</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="L-213"><a href="#L-213"><span class="linenos">213</span></a>    <span class="k">if</span> <span class="n">size</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
-</span><span id="L-214"><a href="#L-214"><span class="linenos">214</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"size must be positive, got </span><span class="si">{</span><span class="n">size</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="L-215"><a href="#L-215"><span class="linenos">215</span></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-</span><span id="L-216"><a href="#L-216"><span class="linenos">216</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
-</span><span id="L-217"><a href="#L-217"><span class="linenos">217</span></a>        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"image not found: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="L-218"><a href="#L-218"><span class="linenos">218</span></a>    <span class="k">try</span><span class="p">:</span>
-</span><span id="L-219"><a href="#L-219"><span class="linenos">219</span></a>        <span class="k">with</span> <span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">img</span><span class="p">:</span>
-</span><span id="L-220"><a href="#L-220"><span class="linenos">220</span></a>            <span class="n">img</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s2">"RGB"</span><span class="p">)</span><span class="o">.</span><span class="n">resize</span><span class="p">((</span><span class="n">size</span><span class="p">,</span> <span class="n">size</span><span class="p">),</span> <span class="n">Image</span><span class="o">.</span><span class="n">Resampling</span><span class="o">.</span><span class="n">BILINEAR</span><span class="p">)</span>
-</span><span id="L-221"><a href="#L-221"><span class="linenos">221</span></a>            <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
-</span><span id="L-222"><a href="#L-222"><span class="linenos">222</span></a>    <span class="k">except</span> <span class="n">UnidentifiedImageError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
-</span><span id="L-223"><a href="#L-223"><span class="linenos">223</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"not a readable image: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">err</span>
-</span><span id="L-224"><a href="#L-224"><span class="linenos">224</span></a>    <span class="k">return</span> <span class="n">arr</span> <span class="o">/</span> <span class="mf">255.0</span>
-</span><span id="L-225"><a href="#L-225"><span class="linenos">225</span></a>
-</span><span id="L-226"><a href="#L-226"><span class="linenos">226</span></a>
-</span><span id="L-227"><a href="#L-227"><span class="linenos">227</span></a><span class="k">def</span><span class="w"> </span><span class="nf">load_images</span><span class="p">(</span><span class="n">paths</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">DEFAULT_IMAGE_SIZE</span><span class="p">):</span>
-</span><span id="L-228"><a href="#L-228"><span class="linenos">228</span></a><span class="w">    </span><span class="sd">"""Load several images into one array.</span>
-</span><span id="L-229"><a href="#L-229"><span class="linenos">229</span></a>
-</span><span id="L-230"><a href="#L-230"><span class="linenos">230</span></a><span class="sd">    Parameters</span>
-</span><span id="L-231"><a href="#L-231"><span class="linenos">231</span></a><span class="sd">    ----------</span>
-</span><span id="L-232"><a href="#L-232"><span class="linenos">232</span></a><span class="sd">    paths : sequence of str or Path</span>
-</span><span id="L-233"><a href="#L-233"><span class="linenos">233</span></a><span class="sd">        Image files, e.g. the ``path`` column from :func:`load_metadata`.</span>
-</span><span id="L-234"><a href="#L-234"><span class="linenos">234</span></a><span class="sd">    size : int, default ``config.DEFAULT_IMAGE_SIZE``</span>
-</span><span id="L-235"><a href="#L-235"><span class="linenos">235</span></a><span class="sd">        Output side length in pixels.</span>
-</span><span id="L-236"><a href="#L-236"><span class="linenos">236</span></a>
-</span><span id="L-237"><a href="#L-237"><span class="linenos">237</span></a><span class="sd">    Returns</span>
-</span><span id="L-238"><a href="#L-238"><span class="linenos">238</span></a><span class="sd">    -------</span>
-</span><span id="L-239"><a href="#L-239"><span class="linenos">239</span></a><span class="sd">    numpy.ndarray</span>
-</span><span id="L-240"><a href="#L-240"><span class="linenos">240</span></a><span class="sd">        Array of shape ``(len(paths), size, size, 3)``, float32 in [0, 1].</span>
-</span><span id="L-241"><a href="#L-241"><span class="linenos">241</span></a>
-</span><span id="L-242"><a href="#L-242"><span class="linenos">242</span></a><span class="sd">    Raises</span>
-</span><span id="L-243"><a href="#L-243"><span class="linenos">243</span></a><span class="sd">    ------</span>
-</span><span id="L-244"><a href="#L-244"><span class="linenos">244</span></a><span class="sd">    ValueError</span>
-</span><span id="L-245"><a href="#L-245"><span class="linenos">245</span></a><span class="sd">        If ``paths`` is empty, or as for :func:`load_image`.</span>
-</span><span id="L-246"><a href="#L-246"><span class="linenos">246</span></a><span class="sd">    """</span>
-</span><span id="L-247"><a href="#L-247"><span class="linenos">247</span></a>    <span class="n">paths</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">paths</span><span class="p">)</span>
-</span><span id="L-248"><a href="#L-248"><span class="linenos">248</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">paths</span><span class="p">:</span>
-</span><span id="L-249"><a href="#L-249"><span class="linenos">249</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"paths is empty"</span><span class="p">)</span>
-</span><span id="L-250"><a href="#L-250"><span class="linenos">250</span></a>    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">load_image</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">])</span>
-</span><span id="L-251"><a href="#L-251"><span class="linenos">251</span></a>
-</span><span id="L-252"><a href="#L-252"><span class="linenos">252</span></a>
-</span><span id="L-253"><a href="#L-253"><span class="linenos">253</span></a><span class="k">def</span><span class="w"> </span><span class="nf">print_table</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
-</span><span id="L-254"><a href="#L-254"><span class="linenos">254</span></a><span class="w">    </span><span class="sd">"""Summarise metadata to one row per print.</span>
-</span><span id="L-255"><a href="#L-255"><span class="linenos">255</span></a>
-</span><span id="L-256"><a href="#L-256"><span class="linenos">256</span></a><span class="sd">    Parameters</span>
-</span><span id="L-257"><a href="#L-257"><span class="linenos">257</span></a><span class="sd">    ----------</span>
-</span><span id="L-258"><a href="#L-258"><span class="linenos">258</span></a><span class="sd">    df : pandas.DataFrame</span>
-</span><span id="L-259"><a href="#L-259"><span class="linenos">259</span></a><span class="sd">        Validated metadata.</span>
-</span><span id="L-260"><a href="#L-260"><span class="linenos">260</span></a>
-</span><span id="L-261"><a href="#L-261"><span class="linenos">261</span></a><span class="sd">    Returns</span>
-</span><span id="L-262"><a href="#L-262"><span class="linenos">262</span></a><span class="sd">    -------</span>
-</span><span id="L-263"><a href="#L-263"><span class="linenos">263</span></a><span class="sd">    pandas.DataFrame</span>
-</span><span id="L-264"><a href="#L-264"><span class="linenos">264</span></a><span class="sd">        Columns ``print_id``, ``printer_id``, ``has_under_extrusion`` and</span>
-</span><span id="L-265"><a href="#L-265"><span class="linenos">265</span></a><span class="sd">        ``n_frames``, sorted by ``print_id``.</span>
-</span><span id="L-266"><a href="#L-266"><span class="linenos">266</span></a><span class="sd">    """</span>
-</span><span id="L-267"><a href="#L-267"><span class="linenos">267</span></a>    <span class="k">return</span> <span class="p">(</span>
-</span><span id="L-268"><a href="#L-268"><span class="linenos">268</span></a>        <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"print_id"</span><span class="p">)</span>
-</span><span id="L-269"><a href="#L-269"><span class="linenos">269</span></a>        <span class="o">.</span><span class="n">agg</span><span class="p">(</span>
-</span><span id="L-270"><a href="#L-270"><span class="linenos">270</span></a>            <span class="n">printer_id</span><span class="o">=</span><span class="p">(</span><span class="s2">"printer_id"</span><span class="p">,</span> <span class="s2">"first"</span><span class="p">),</span>
-</span><span id="L-271"><a href="#L-271"><span class="linenos">271</span></a>            <span class="n">has_under_extrusion</span><span class="o">=</span><span class="p">(</span><span class="n">LABEL_COLUMN</span><span class="p">,</span> <span class="s2">"first"</span><span class="p">),</span>
-</span><span id="L-272"><a href="#L-272"><span class="linenos">272</span></a>            <span class="n">n_frames</span><span class="o">=</span><span class="p">(</span><span class="s2">"img_path"</span><span class="p">,</span> <span class="s2">"size"</span><span class="p">),</span>
-</span><span id="L-273"><a href="#L-273"><span class="linenos">273</span></a>        <span class="p">)</span>
-</span><span id="L-274"><a href="#L-274"><span class="linenos">274</span></a>        <span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
-</span><span id="L-275"><a href="#L-275"><span class="linenos">275</span></a>        <span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s2">"print_id"</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="L-276"><a href="#L-276"><span class="linenos">276</span></a>    <span class="p">)</span>
-</span><span id="L-277"><a href="#L-277"><span class="linenos">277</span></a>
-</span><span id="L-278"><a href="#L-278"><span class="linenos">278</span></a>
-</span><span id="L-279"><a href="#L-279"><span class="linenos">279</span></a><span class="k">def</span><span class="w"> </span><span class="nf">split_by_print</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">val_frac</span><span class="o">=</span><span class="mf">0.15</span><span class="p">,</span> <span class="n">test_frac</span><span class="o">=</span><span class="mf">0.15</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">DEFAULT_SEED</span><span class="p">):</span>
-</span><span id="L-280"><a href="#L-280"><span class="linenos">280</span></a><span class="w">    </span><span class="sd">"""Split metadata into train/val/test by print, stratified by label.</span>
-</span><span id="L-281"><a href="#L-281"><span class="linenos">281</span></a>
-</span><span id="L-282"><a href="#L-282"><span class="linenos">282</span></a><span class="sd">    Whole prints are assigned to one split, so near-duplicate frames of the</span>
-</span><span id="L-283"><a href="#L-283"><span class="linenos">283</span></a><span class="sd">    same print can never appear on both sides of an evaluation. Good and</span>
-</span><span id="L-284"><a href="#L-284"><span class="linenos">284</span></a><span class="sd">    defective prints are shuffled and divided separately, so each split gets</span>
-</span><span id="L-285"><a href="#L-285"><span class="linenos">285</span></a><span class="sd">    about the same fraction of each class and at least one print of each.</span>
-</span><span id="L-286"><a href="#L-286"><span class="linenos">286</span></a>
-</span><span id="L-287"><a href="#L-287"><span class="linenos">287</span></a><span class="sd">    Parameters</span>
-</span><span id="L-288"><a href="#L-288"><span class="linenos">288</span></a><span class="sd">    ----------</span>
-</span><span id="L-289"><a href="#L-289"><span class="linenos">289</span></a><span class="sd">    df : pandas.DataFrame</span>
-</span><span id="L-290"><a href="#L-290"><span class="linenos">290</span></a><span class="sd">        Validated metadata (see :func:`validate_metadata`).</span>
-</span><span id="L-291"><a href="#L-291"><span class="linenos">291</span></a><span class="sd">    val_frac, test_frac : float, default 0.15</span>
-</span><span id="L-292"><a href="#L-292"><span class="linenos">292</span></a><span class="sd">        Fraction of the prints of each class sent to validation and test.</span>
-</span><span id="L-293"><a href="#L-293"><span class="linenos">293</span></a><span class="sd">        Each must be in (0, 1) and together less than 1. Counts are rounded</span>
-</span><span id="L-294"><a href="#L-294"><span class="linenos">294</span></a><span class="sd">        to the nearest whole print (halves round up), with a minimum of one.</span>
-</span><span id="L-295"><a href="#L-295"><span class="linenos">295</span></a><span class="sd">    seed : int, default ``config.DEFAULT_SEED``</span>
-</span><span id="L-296"><a href="#L-296"><span class="linenos">296</span></a><span class="sd">        Seed for the shuffle; the same seed always gives the same split.</span>
-</span><span id="L-297"><a href="#L-297"><span class="linenos">297</span></a>
-</span><span id="L-298"><a href="#L-298"><span class="linenos">298</span></a><span class="sd">    Returns</span>
-</span><span id="L-299"><a href="#L-299"><span class="linenos">299</span></a><span class="sd">    -------</span>
-</span><span id="L-300"><a href="#L-300"><span class="linenos">300</span></a><span class="sd">    DataSplit</span>
-</span><span id="L-301"><a href="#L-301"><span class="linenos">301</span></a><span class="sd">        ``(train, val, test)`` DataFrames with reset indexes.</span>
+</span><span id="L-196"><a href="#L-196"><span class="linenos">196</span></a><span class="sd">    Parameters</span>
+</span><span id="L-197"><a href="#L-197"><span class="linenos">197</span></a><span class="sd">    ----------</span>
+</span><span id="L-198"><a href="#L-198"><span class="linenos">198</span></a><span class="sd">    df : pandas.DataFrame</span>
+</span><span id="L-199"><a href="#L-199"><span class="linenos">199</span></a><span class="sd">        Metadata with at least ``img_path`` and ``print_id`` columns,</span>
+</span><span id="L-200"><a href="#L-200"><span class="linenos">200</span></a><span class="sd">        e.g. the full ``train.csv``.</span>
+</span><span id="L-201"><a href="#L-201"><span class="linenos">201</span></a><span class="sd">    frames_per_print : int, default 120</span>
+</span><span id="L-202"><a href="#L-202"><span class="linenos">202</span></a><span class="sd">        Maximum frames kept per print; prints with fewer keep all of them.</span>
+</span><span id="L-203"><a href="#L-203"><span class="linenos">203</span></a>
+</span><span id="L-204"><a href="#L-204"><span class="linenos">204</span></a><span class="sd">    Returns</span>
+</span><span id="L-205"><a href="#L-205"><span class="linenos">205</span></a><span class="sd">    -------</span>
+</span><span id="L-206"><a href="#L-206"><span class="linenos">206</span></a><span class="sd">    pandas.DataFrame</span>
+</span><span id="L-207"><a href="#L-207"><span class="linenos">207</span></a><span class="sd">        The selected rows, same columns as ``df``, with a fresh index.</span>
+</span><span id="L-208"><a href="#L-208"><span class="linenos">208</span></a>
+</span><span id="L-209"><a href="#L-209"><span class="linenos">209</span></a><span class="sd">    Raises</span>
+</span><span id="L-210"><a href="#L-210"><span class="linenos">210</span></a><span class="sd">    ------</span>
+</span><span id="L-211"><a href="#L-211"><span class="linenos">211</span></a><span class="sd">    ValueError</span>
+</span><span id="L-212"><a href="#L-212"><span class="linenos">212</span></a><span class="sd">        If a required column is missing, ``df`` is empty, or</span>
+</span><span id="L-213"><a href="#L-213"><span class="linenos">213</span></a><span class="sd">        ``frames_per_print`` is not a positive integer.</span>
+</span><span id="L-214"><a href="#L-214"><span class="linenos">214</span></a><span class="sd">    """</span>
+</span><span id="L-215"><a href="#L-215"><span class="linenos">215</span></a>    <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"img_path"</span><span class="p">,</span> <span class="s2">"print_id"</span><span class="p">)</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+</span><span id="L-216"><a href="#L-216"><span class="linenos">216</span></a>    <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+</span><span id="L-217"><a href="#L-217"><span class="linenos">217</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"df is missing columns: </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="L-218"><a href="#L-218"><span class="linenos">218</span></a>    <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+</span><span id="L-219"><a href="#L-219"><span class="linenos">219</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"df has no rows"</span><span class="p">)</span>
+</span><span id="L-220"><a href="#L-220"><span class="linenos">220</span></a>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">frames_per_print</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">frames_per_print</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">))</span> <span class="ow">or</span> <span class="n">frames_per_print</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+</span><span id="L-221"><a href="#L-221"><span class="linenos">221</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"frames_per_print must be a positive integer, got </span><span class="si">{</span><span class="n">frames_per_print</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="L-222"><a href="#L-222"><span class="linenos">222</span></a>
+</span><span id="L-223"><a href="#L-223"><span class="linenos">223</span></a>    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s2">"img_path"</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"stable"</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="L-224"><a href="#L-224"><span class="linenos">224</span></a>    <span class="n">parts</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="L-225"><a href="#L-225"><span class="linenos">225</span></a>    <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">frames</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"print_id"</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+</span><span id="L-226"><a href="#L-226"><span class="linenos">226</span></a>        <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">frames</span><span class="p">)</span>
+</span><span id="L-227"><a href="#L-227"><span class="linenos">227</span></a>        <span class="n">positions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">frames_per_print</span><span class="p">,</span> <span class="n">n</span><span class="p">))</span><span class="o">.</span><span class="n">round</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">))</span>
+</span><span id="L-228"><a href="#L-228"><span class="linenos">228</span></a>        <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">frames</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">positions</span><span class="p">])</span>
+</span><span id="L-229"><a href="#L-229"><span class="linenos">229</span></a>    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">parts</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="L-230"><a href="#L-230"><span class="linenos">230</span></a>
+</span><span id="L-231"><a href="#L-231"><span class="linenos">231</span></a>
+</span><span id="L-232"><a href="#L-232"><span class="linenos">232</span></a><span class="k">def</span><span class="w"> </span><span class="nf">load_image</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">DEFAULT_IMAGE_SIZE</span><span class="p">):</span>
+</span><span id="L-233"><a href="#L-233"><span class="linenos">233</span></a><span class="w">    </span><span class="sd">"""Load one image as a square RGB array scaled to [0, 1].</span>
+</span><span id="L-234"><a href="#L-234"><span class="linenos">234</span></a>
+</span><span id="L-235"><a href="#L-235"><span class="linenos">235</span></a><span class="sd">    Parameters</span>
+</span><span id="L-236"><a href="#L-236"><span class="linenos">236</span></a><span class="sd">    ----------</span>
+</span><span id="L-237"><a href="#L-237"><span class="linenos">237</span></a><span class="sd">    path : str or Path</span>
+</span><span id="L-238"><a href="#L-238"><span class="linenos">238</span></a><span class="sd">        JPEG or PNG file. Greyscale and RGBA images are converted to RGB.</span>
+</span><span id="L-239"><a href="#L-239"><span class="linenos">239</span></a><span class="sd">    size : int, default ``config.DEFAULT_IMAGE_SIZE``</span>
+</span><span id="L-240"><a href="#L-240"><span class="linenos">240</span></a><span class="sd">        Output side length in pixels; the image is resized (bilinear) to</span>
+</span><span id="L-241"><a href="#L-241"><span class="linenos">241</span></a><span class="sd">        ``size x size`` without preserving aspect ratio.</span>
+</span><span id="L-242"><a href="#L-242"><span class="linenos">242</span></a>
+</span><span id="L-243"><a href="#L-243"><span class="linenos">243</span></a><span class="sd">    Returns</span>
+</span><span id="L-244"><a href="#L-244"><span class="linenos">244</span></a><span class="sd">    -------</span>
+</span><span id="L-245"><a href="#L-245"><span class="linenos">245</span></a><span class="sd">    numpy.ndarray</span>
+</span><span id="L-246"><a href="#L-246"><span class="linenos">246</span></a><span class="sd">        Array of shape ``(size, size, 3)``, dtype float32, values in [0, 1].</span>
+</span><span id="L-247"><a href="#L-247"><span class="linenos">247</span></a>
+</span><span id="L-248"><a href="#L-248"><span class="linenos">248</span></a><span class="sd">    Raises</span>
+</span><span id="L-249"><a href="#L-249"><span class="linenos">249</span></a><span class="sd">    ------</span>
+</span><span id="L-250"><a href="#L-250"><span class="linenos">250</span></a><span class="sd">    TypeError</span>
+</span><span id="L-251"><a href="#L-251"><span class="linenos">251</span></a><span class="sd">        If ``size`` is not an integer.</span>
+</span><span id="L-252"><a href="#L-252"><span class="linenos">252</span></a><span class="sd">    ValueError</span>
+</span><span id="L-253"><a href="#L-253"><span class="linenos">253</span></a><span class="sd">        If ``size`` is not positive or the file is not a readable image.</span>
+</span><span id="L-254"><a href="#L-254"><span class="linenos">254</span></a><span class="sd">    FileNotFoundError</span>
+</span><span id="L-255"><a href="#L-255"><span class="linenos">255</span></a><span class="sd">        If ``path`` does not exist.</span>
+</span><span id="L-256"><a href="#L-256"><span class="linenos">256</span></a><span class="sd">    """</span>
+</span><span id="L-257"><a href="#L-257"><span class="linenos">257</span></a>    <span class="c1"># bool is a subclass of int, but size=True is certainly a mistake.</span>
+</span><span id="L-258"><a href="#L-258"><span class="linenos">258</span></a>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
+</span><span id="L-259"><a href="#L-259"><span class="linenos">259</span></a>        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"size must be an integer, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">size</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="L-260"><a href="#L-260"><span class="linenos">260</span></a>    <span class="k">if</span> <span class="n">size</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+</span><span id="L-261"><a href="#L-261"><span class="linenos">261</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"size must be positive, got </span><span class="si">{</span><span class="n">size</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="L-262"><a href="#L-262"><span class="linenos">262</span></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+</span><span id="L-263"><a href="#L-263"><span class="linenos">263</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+</span><span id="L-264"><a href="#L-264"><span class="linenos">264</span></a>        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"image not found: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="L-265"><a href="#L-265"><span class="linenos">265</span></a>    <span class="k">try</span><span class="p">:</span>
+</span><span id="L-266"><a href="#L-266"><span class="linenos">266</span></a>        <span class="k">with</span> <span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">img</span><span class="p">:</span>
+</span><span id="L-267"><a href="#L-267"><span class="linenos">267</span></a>            <span class="n">img</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s2">"RGB"</span><span class="p">)</span><span class="o">.</span><span class="n">resize</span><span class="p">((</span><span class="n">size</span><span class="p">,</span> <span class="n">size</span><span class="p">),</span> <span class="n">Image</span><span class="o">.</span><span class="n">Resampling</span><span class="o">.</span><span class="n">BILINEAR</span><span class="p">)</span>
+</span><span id="L-268"><a href="#L-268"><span class="linenos">268</span></a>            <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+</span><span id="L-269"><a href="#L-269"><span class="linenos">269</span></a>    <span class="k">except</span> <span class="n">UnidentifiedImageError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+</span><span id="L-270"><a href="#L-270"><span class="linenos">270</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"not a readable image: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">err</span>
+</span><span id="L-271"><a href="#L-271"><span class="linenos">271</span></a>    <span class="k">return</span> <span class="n">arr</span> <span class="o">/</span> <span class="mf">255.0</span>
+</span><span id="L-272"><a href="#L-272"><span class="linenos">272</span></a>
+</span><span id="L-273"><a href="#L-273"><span class="linenos">273</span></a>
+</span><span id="L-274"><a href="#L-274"><span class="linenos">274</span></a><span class="k">def</span><span class="w"> </span><span class="nf">load_images</span><span class="p">(</span><span class="n">paths</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">DEFAULT_IMAGE_SIZE</span><span class="p">):</span>
+</span><span id="L-275"><a href="#L-275"><span class="linenos">275</span></a><span class="w">    </span><span class="sd">"""Load several images into one array.</span>
+</span><span id="L-276"><a href="#L-276"><span class="linenos">276</span></a>
+</span><span id="L-277"><a href="#L-277"><span class="linenos">277</span></a><span class="sd">    Parameters</span>
+</span><span id="L-278"><a href="#L-278"><span class="linenos">278</span></a><span class="sd">    ----------</span>
+</span><span id="L-279"><a href="#L-279"><span class="linenos">279</span></a><span class="sd">    paths : sequence of str or Path</span>
+</span><span id="L-280"><a href="#L-280"><span class="linenos">280</span></a><span class="sd">        Image files, e.g. the ``path`` column from :func:`load_metadata`.</span>
+</span><span id="L-281"><a href="#L-281"><span class="linenos">281</span></a><span class="sd">    size : int, default ``config.DEFAULT_IMAGE_SIZE``</span>
+</span><span id="L-282"><a href="#L-282"><span class="linenos">282</span></a><span class="sd">        Output side length in pixels.</span>
+</span><span id="L-283"><a href="#L-283"><span class="linenos">283</span></a>
+</span><span id="L-284"><a href="#L-284"><span class="linenos">284</span></a><span class="sd">    Returns</span>
+</span><span id="L-285"><a href="#L-285"><span class="linenos">285</span></a><span class="sd">    -------</span>
+</span><span id="L-286"><a href="#L-286"><span class="linenos">286</span></a><span class="sd">    numpy.ndarray</span>
+</span><span id="L-287"><a href="#L-287"><span class="linenos">287</span></a><span class="sd">        Array of shape ``(len(paths), size, size, 3)``, float32 in [0, 1].</span>
+</span><span id="L-288"><a href="#L-288"><span class="linenos">288</span></a>
+</span><span id="L-289"><a href="#L-289"><span class="linenos">289</span></a><span class="sd">    Raises</span>
+</span><span id="L-290"><a href="#L-290"><span class="linenos">290</span></a><span class="sd">    ------</span>
+</span><span id="L-291"><a href="#L-291"><span class="linenos">291</span></a><span class="sd">    ValueError</span>
+</span><span id="L-292"><a href="#L-292"><span class="linenos">292</span></a><span class="sd">        If ``paths`` is empty, or as for :func:`load_image`.</span>
+</span><span id="L-293"><a href="#L-293"><span class="linenos">293</span></a><span class="sd">    """</span>
+</span><span id="L-294"><a href="#L-294"><span class="linenos">294</span></a>    <span class="n">paths</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">paths</span><span class="p">)</span>
+</span><span id="L-295"><a href="#L-295"><span class="linenos">295</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">paths</span><span class="p">:</span>
+</span><span id="L-296"><a href="#L-296"><span class="linenos">296</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"paths is empty"</span><span class="p">)</span>
+</span><span id="L-297"><a href="#L-297"><span class="linenos">297</span></a>    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">load_image</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">])</span>
+</span><span id="L-298"><a href="#L-298"><span class="linenos">298</span></a>
+</span><span id="L-299"><a href="#L-299"><span class="linenos">299</span></a>
+</span><span id="L-300"><a href="#L-300"><span class="linenos">300</span></a><span class="k">def</span><span class="w"> </span><span class="nf">print_table</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
+</span><span id="L-301"><a href="#L-301"><span class="linenos">301</span></a><span class="w">    </span><span class="sd">"""Summarise metadata to one row per print.</span>
 </span><span id="L-302"><a href="#L-302"><span class="linenos">302</span></a>
-</span><span id="L-303"><a href="#L-303"><span class="linenos">303</span></a><span class="sd">    Raises</span>
-</span><span id="L-304"><a href="#L-304"><span class="linenos">304</span></a><span class="sd">    ------</span>
-</span><span id="L-305"><a href="#L-305"><span class="linenos">305</span></a><span class="sd">    ValueError</span>
-</span><span id="L-306"><a href="#L-306"><span class="linenos">306</span></a><span class="sd">        If the fractions are out of range, or a class has fewer than three</span>
-</span><span id="L-307"><a href="#L-307"><span class="linenos">307</span></a><span class="sd">        prints (one is needed per split).</span>
-</span><span id="L-308"><a href="#L-308"><span class="linenos">308</span></a><span class="sd">    """</span>
-</span><span id="L-309"><a href="#L-309"><span class="linenos">309</span></a>    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">frac</span> <span class="ow">in</span> <span class="p">((</span><span class="s2">"val_frac"</span><span class="p">,</span> <span class="n">val_frac</span><span class="p">),</span> <span class="p">(</span><span class="s2">"test_frac"</span><span class="p">,</span> <span class="n">test_frac</span><span class="p">)):</span>
-</span><span id="L-310"><a href="#L-310"><span class="linenos">310</span></a>        <span class="k">if</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">frac</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
-</span><span id="L-311"><a href="#L-311"><span class="linenos">311</span></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> must be in (0, 1), got </span><span class="si">{</span><span class="n">frac</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="L-312"><a href="#L-312"><span class="linenos">312</span></a>    <span class="k">if</span> <span class="n">val_frac</span> <span class="o">+</span> <span class="n">test_frac</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
-</span><span id="L-313"><a href="#L-313"><span class="linenos">313</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"val_frac + test_frac must be less than 1"</span><span class="p">)</span>
-</span><span id="L-314"><a href="#L-314"><span class="linenos">314</span></a>
-</span><span id="L-315"><a href="#L-315"><span class="linenos">315</span></a>    <span class="n">prints</span> <span class="o">=</span> <span class="n">print_table</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
-</span><span id="L-316"><a href="#L-316"><span class="linenos">316</span></a>    <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
-</span><span id="L-317"><a href="#L-317"><span class="linenos">317</span></a>    <span class="n">split_ids</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"train"</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">"val"</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">"test"</span><span class="p">:</span> <span class="p">[]}</span>
-</span><span id="L-318"><a href="#L-318"><span class="linenos">318</span></a>    <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
-</span><span id="L-319"><a href="#L-319"><span class="linenos">319</span></a>        <span class="n">ids</span> <span class="o">=</span> <span class="n">prints</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">prints</span><span class="p">[</span><span class="n">LABEL_COLUMN</span><span class="p">]</span> <span class="o">==</span> <span class="n">label</span><span class="p">,</span> <span class="s2">"print_id"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
-</span><span id="L-320"><a href="#L-320"><span class="linenos">320</span></a>        <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ids</span><span class="p">)</span>
-</span><span id="L-321"><a href="#L-321"><span class="linenos">321</span></a>        <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
-</span><span id="L-322"><a href="#L-322"><span class="linenos">322</span></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-</span><span id="L-323"><a href="#L-323"><span class="linenos">323</span></a>                <span class="sa">f</span><span class="s2">"need at least 3 prints with label </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> to fill every split, got </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2">"</span>
-</span><span id="L-324"><a href="#L-324"><span class="linenos">324</span></a>            <span class="p">)</span>
-</span><span id="L-325"><a href="#L-325"><span class="linenos">325</span></a>        <span class="n">ids</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">permutation</span><span class="p">(</span><span class="n">ids</span><span class="p">)</span>
-</span><span id="L-326"><a href="#L-326"><span class="linenos">326</span></a>        <span class="c1"># Round half up; Python's round() rounds half to even (round(4.5) == 4).</span>
-</span><span id="L-327"><a href="#L-327"><span class="linenos">327</span></a>        <span class="n">n_test</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">n</span> <span class="o">*</span> <span class="n">test_frac</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)))</span>
-</span><span id="L-328"><a href="#L-328"><span class="linenos">328</span></a>        <span class="n">n_val</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">n</span> <span class="o">*</span> <span class="n">val_frac</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)))</span>
-</span><span id="L-329"><a href="#L-329"><span class="linenos">329</span></a>        <span class="k">if</span> <span class="n">n</span> <span class="o">-</span> <span class="n">n_test</span> <span class="o">-</span> <span class="n">n_val</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
-</span><span id="L-330"><a href="#L-330"><span class="linenos">330</span></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"no label-</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> prints left for training; lower the fractions"</span><span class="p">)</span>
-</span><span id="L-331"><a href="#L-331"><span class="linenos">331</span></a>        <span class="n">split_ids</span><span class="p">[</span><span class="s2">"test"</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">ids</span><span class="p">[:</span><span class="n">n_test</span><span class="p">])</span>
-</span><span id="L-332"><a href="#L-332"><span class="linenos">332</span></a>        <span class="n">split_ids</span><span class="p">[</span><span class="s2">"val"</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">ids</span><span class="p">[</span><span class="n">n_test</span> <span class="p">:</span> <span class="n">n_test</span> <span class="o">+</span> <span class="n">n_val</span><span class="p">])</span>
-</span><span id="L-333"><a href="#L-333"><span class="linenos">333</span></a>        <span class="n">split_ids</span><span class="p">[</span><span class="s2">"train"</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">ids</span><span class="p">[</span><span class="n">n_test</span> <span class="o">+</span> <span class="n">n_val</span> <span class="p">:])</span>
-</span><span id="L-334"><a href="#L-334"><span class="linenos">334</span></a>
-</span><span id="L-335"><a href="#L-335"><span class="linenos">335</span></a>    <span class="n">split</span> <span class="o">=</span> <span class="n">DataSplit</span><span class="p">(</span>
-</span><span id="L-336"><a href="#L-336"><span class="linenos">336</span></a>        <span class="o">*</span><span class="p">(</span>
-</span><span id="L-337"><a href="#L-337"><span class="linenos">337</span></a>            <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s2">"print_id"</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">split_ids</span><span class="p">[</span><span class="n">name</span><span class="p">])]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="L-338"><a href="#L-338"><span class="linenos">338</span></a>            <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">DataSplit</span><span class="o">.</span><span class="n">_fields</span>
-</span><span id="L-339"><a href="#L-339"><span class="linenos">339</span></a>        <span class="p">)</span>
-</span><span id="L-340"><a href="#L-340"><span class="linenos">340</span></a>    <span class="p">)</span>
-</span><span id="L-341"><a href="#L-341"><span class="linenos">341</span></a>    <span class="n">check_no_print_leakage</span><span class="p">(</span><span class="n">split</span><span class="p">)</span>
-</span><span id="L-342"><a href="#L-342"><span class="linenos">342</span></a>    <span class="k">return</span> <span class="n">split</span>
-</span><span id="L-343"><a href="#L-343"><span class="linenos">343</span></a>
+</span><span id="L-303"><a href="#L-303"><span class="linenos">303</span></a><span class="sd">    Parameters</span>
+</span><span id="L-304"><a href="#L-304"><span class="linenos">304</span></a><span class="sd">    ----------</span>
+</span><span id="L-305"><a href="#L-305"><span class="linenos">305</span></a><span class="sd">    df : pandas.DataFrame</span>
+</span><span id="L-306"><a href="#L-306"><span class="linenos">306</span></a><span class="sd">        Validated metadata.</span>
+</span><span id="L-307"><a href="#L-307"><span class="linenos">307</span></a>
+</span><span id="L-308"><a href="#L-308"><span class="linenos">308</span></a><span class="sd">    Returns</span>
+</span><span id="L-309"><a href="#L-309"><span class="linenos">309</span></a><span class="sd">    -------</span>
+</span><span id="L-310"><a href="#L-310"><span class="linenos">310</span></a><span class="sd">    pandas.DataFrame</span>
+</span><span id="L-311"><a href="#L-311"><span class="linenos">311</span></a><span class="sd">        Columns ``print_id``, ``printer_id``, ``has_under_extrusion`` and</span>
+</span><span id="L-312"><a href="#L-312"><span class="linenos">312</span></a><span class="sd">        ``n_frames``, sorted by ``print_id``.</span>
+</span><span id="L-313"><a href="#L-313"><span class="linenos">313</span></a><span class="sd">    """</span>
+</span><span id="L-314"><a href="#L-314"><span class="linenos">314</span></a>    <span class="k">return</span> <span class="p">(</span>
+</span><span id="L-315"><a href="#L-315"><span class="linenos">315</span></a>        <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"print_id"</span><span class="p">)</span>
+</span><span id="L-316"><a href="#L-316"><span class="linenos">316</span></a>        <span class="o">.</span><span class="n">agg</span><span class="p">(</span>
+</span><span id="L-317"><a href="#L-317"><span class="linenos">317</span></a>            <span class="n">printer_id</span><span class="o">=</span><span class="p">(</span><span class="s2">"printer_id"</span><span class="p">,</span> <span class="s2">"first"</span><span class="p">),</span>
+</span><span id="L-318"><a href="#L-318"><span class="linenos">318</span></a>            <span class="n">has_under_extrusion</span><span class="o">=</span><span class="p">(</span><span class="n">LABEL_COLUMN</span><span class="p">,</span> <span class="s2">"first"</span><span class="p">),</span>
+</span><span id="L-319"><a href="#L-319"><span class="linenos">319</span></a>            <span class="n">n_frames</span><span class="o">=</span><span class="p">(</span><span class="s2">"img_path"</span><span class="p">,</span> <span class="s2">"size"</span><span class="p">),</span>
+</span><span id="L-320"><a href="#L-320"><span class="linenos">320</span></a>        <span class="p">)</span>
+</span><span id="L-321"><a href="#L-321"><span class="linenos">321</span></a>        <span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+</span><span id="L-322"><a href="#L-322"><span class="linenos">322</span></a>        <span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s2">"print_id"</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="L-323"><a href="#L-323"><span class="linenos">323</span></a>    <span class="p">)</span>
+</span><span id="L-324"><a href="#L-324"><span class="linenos">324</span></a>
+</span><span id="L-325"><a href="#L-325"><span class="linenos">325</span></a>
+</span><span id="L-326"><a href="#L-326"><span class="linenos">326</span></a><span class="k">def</span><span class="w"> </span><span class="nf">split_by_print</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">val_frac</span><span class="o">=</span><span class="mf">0.15</span><span class="p">,</span> <span class="n">test_frac</span><span class="o">=</span><span class="mf">0.15</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">DEFAULT_SEED</span><span class="p">):</span>
+</span><span id="L-327"><a href="#L-327"><span class="linenos">327</span></a><span class="w">    </span><span class="sd">"""Split metadata into train/val/test by print, stratified by label.</span>
+</span><span id="L-328"><a href="#L-328"><span class="linenos">328</span></a>
+</span><span id="L-329"><a href="#L-329"><span class="linenos">329</span></a><span class="sd">    Whole prints are assigned to one split, so near-duplicate frames of the</span>
+</span><span id="L-330"><a href="#L-330"><span class="linenos">330</span></a><span class="sd">    same print can never appear on both sides of an evaluation. Good and</span>
+</span><span id="L-331"><a href="#L-331"><span class="linenos">331</span></a><span class="sd">    defective prints are shuffled and divided separately, so each split gets</span>
+</span><span id="L-332"><a href="#L-332"><span class="linenos">332</span></a><span class="sd">    about the same fraction of each class and at least one print of each.</span>
+</span><span id="L-333"><a href="#L-333"><span class="linenos">333</span></a>
+</span><span id="L-334"><a href="#L-334"><span class="linenos">334</span></a><span class="sd">    Parameters</span>
+</span><span id="L-335"><a href="#L-335"><span class="linenos">335</span></a><span class="sd">    ----------</span>
+</span><span id="L-336"><a href="#L-336"><span class="linenos">336</span></a><span class="sd">    df : pandas.DataFrame</span>
+</span><span id="L-337"><a href="#L-337"><span class="linenos">337</span></a><span class="sd">        Validated metadata (see :func:`validate_metadata`).</span>
+</span><span id="L-338"><a href="#L-338"><span class="linenos">338</span></a><span class="sd">    val_frac, test_frac : float, default 0.15</span>
+</span><span id="L-339"><a href="#L-339"><span class="linenos">339</span></a><span class="sd">        Fraction of the prints of each class sent to validation and test.</span>
+</span><span id="L-340"><a href="#L-340"><span class="linenos">340</span></a><span class="sd">        Each must be in (0, 1) and together less than 1. Counts are rounded</span>
+</span><span id="L-341"><a href="#L-341"><span class="linenos">341</span></a><span class="sd">        to the nearest whole print (halves round up), with a minimum of one.</span>
+</span><span id="L-342"><a href="#L-342"><span class="linenos">342</span></a><span class="sd">    seed : int, default ``config.DEFAULT_SEED``</span>
+</span><span id="L-343"><a href="#L-343"><span class="linenos">343</span></a><span class="sd">        Seed for the shuffle; the same seed always gives the same split.</span>
 </span><span id="L-344"><a href="#L-344"><span class="linenos">344</span></a>
-</span><span id="L-345"><a href="#L-345"><span class="linenos">345</span></a><span class="k">def</span><span class="w"> </span><span class="nf">check_no_print_leakage</span><span class="p">(</span><span class="n">split</span><span class="p">):</span>
-</span><span id="L-346"><a href="#L-346"><span class="linenos">346</span></a><span class="w">    </span><span class="sd">"""Check that no print appears in more than one split.</span>
-</span><span id="L-347"><a href="#L-347"><span class="linenos">347</span></a>
-</span><span id="L-348"><a href="#L-348"><span class="linenos">348</span></a><span class="sd">    Parameters</span>
-</span><span id="L-349"><a href="#L-349"><span class="linenos">349</span></a><span class="sd">    ----------</span>
-</span><span id="L-350"><a href="#L-350"><span class="linenos">350</span></a><span class="sd">    split : DataSplit or sequence of pandas.DataFrame</span>
-</span><span id="L-351"><a href="#L-351"><span class="linenos">351</span></a><span class="sd">        DataFrames with a ``print_id`` column.</span>
-</span><span id="L-352"><a href="#L-352"><span class="linenos">352</span></a>
-</span><span id="L-353"><a href="#L-353"><span class="linenos">353</span></a><span class="sd">    Raises</span>
-</span><span id="L-354"><a href="#L-354"><span class="linenos">354</span></a><span class="sd">    ------</span>
-</span><span id="L-355"><a href="#L-355"><span class="linenos">355</span></a><span class="sd">    ValueError</span>
-</span><span id="L-356"><a href="#L-356"><span class="linenos">356</span></a><span class="sd">        If any ``print_id`` is shared between two of the DataFrames.</span>
-</span><span id="L-357"><a href="#L-357"><span class="linenos">357</span></a><span class="sd">    """</span>
-</span><span id="L-358"><a href="#L-358"><span class="linenos">358</span></a>    <span class="n">seen</span> <span class="o">=</span> <span class="p">{}</span>
-</span><span id="L-359"><a href="#L-359"><span class="linenos">359</span></a>    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">part</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">split</span><span class="p">):</span>
-</span><span id="L-360"><a href="#L-360"><span class="linenos">360</span></a>        <span class="k">for</span> <span class="n">pid</span> <span class="ow">in</span> <span class="n">part</span><span class="p">[</span><span class="s2">"print_id"</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">():</span>
-</span><span id="L-361"><a href="#L-361"><span class="linenos">361</span></a>            <span class="k">if</span> <span class="n">pid</span> <span class="ow">in</span> <span class="n">seen</span><span class="p">:</span>
-</span><span id="L-362"><a href="#L-362"><span class="linenos">362</span></a>                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"print </span><span class="si">{</span><span class="n">pid</span><span class="si">}</span><span class="s2"> is in splits </span><span class="si">{</span><span class="n">seen</span><span class="p">[</span><span class="n">pid</span><span class="p">]</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="L-363"><a href="#L-363"><span class="linenos">363</span></a>            <span class="n">seen</span><span class="p">[</span><span class="n">pid</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
+</span><span id="L-345"><a href="#L-345"><span class="linenos">345</span></a><span class="sd">    Returns</span>
+</span><span id="L-346"><a href="#L-346"><span class="linenos">346</span></a><span class="sd">    -------</span>
+</span><span id="L-347"><a href="#L-347"><span class="linenos">347</span></a><span class="sd">    DataSplit</span>
+</span><span id="L-348"><a href="#L-348"><span class="linenos">348</span></a><span class="sd">        ``(train, val, test)`` DataFrames with reset indexes.</span>
+</span><span id="L-349"><a href="#L-349"><span class="linenos">349</span></a>
+</span><span id="L-350"><a href="#L-350"><span class="linenos">350</span></a><span class="sd">    Raises</span>
+</span><span id="L-351"><a href="#L-351"><span class="linenos">351</span></a><span class="sd">    ------</span>
+</span><span id="L-352"><a href="#L-352"><span class="linenos">352</span></a><span class="sd">    ValueError</span>
+</span><span id="L-353"><a href="#L-353"><span class="linenos">353</span></a><span class="sd">        If the fractions are out of range, or a class has fewer than three</span>
+</span><span id="L-354"><a href="#L-354"><span class="linenos">354</span></a><span class="sd">        prints (one is needed per split).</span>
+</span><span id="L-355"><a href="#L-355"><span class="linenos">355</span></a><span class="sd">    """</span>
+</span><span id="L-356"><a href="#L-356"><span class="linenos">356</span></a>    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">frac</span> <span class="ow">in</span> <span class="p">((</span><span class="s2">"val_frac"</span><span class="p">,</span> <span class="n">val_frac</span><span class="p">),</span> <span class="p">(</span><span class="s2">"test_frac"</span><span class="p">,</span> <span class="n">test_frac</span><span class="p">)):</span>
+</span><span id="L-357"><a href="#L-357"><span class="linenos">357</span></a>        <span class="k">if</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">frac</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+</span><span id="L-358"><a href="#L-358"><span class="linenos">358</span></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> must be in (0, 1), got </span><span class="si">{</span><span class="n">frac</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="L-359"><a href="#L-359"><span class="linenos">359</span></a>    <span class="k">if</span> <span class="n">val_frac</span> <span class="o">+</span> <span class="n">test_frac</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
+</span><span id="L-360"><a href="#L-360"><span class="linenos">360</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"val_frac + test_frac must be less than 1"</span><span class="p">)</span>
+</span><span id="L-361"><a href="#L-361"><span class="linenos">361</span></a>
+</span><span id="L-362"><a href="#L-362"><span class="linenos">362</span></a>    <span class="n">prints</span> <span class="o">=</span> <span class="n">print_table</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+</span><span id="L-363"><a href="#L-363"><span class="linenos">363</span></a>    <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+</span><span id="L-364"><a href="#L-364"><span class="linenos">364</span></a>    <span class="n">split_ids</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"train"</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">"val"</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">"test"</span><span class="p">:</span> <span class="p">[]}</span>
+</span><span id="L-365"><a href="#L-365"><span class="linenos">365</span></a>    <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
+</span><span id="L-366"><a href="#L-366"><span class="linenos">366</span></a>        <span class="n">ids</span> <span class="o">=</span> <span class="n">prints</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">prints</span><span class="p">[</span><span class="n">LABEL_COLUMN</span><span class="p">]</span> <span class="o">==</span> <span class="n">label</span><span class="p">,</span> <span class="s2">"print_id"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+</span><span id="L-367"><a href="#L-367"><span class="linenos">367</span></a>        <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ids</span><span class="p">)</span>
+</span><span id="L-368"><a href="#L-368"><span class="linenos">368</span></a>        <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
+</span><span id="L-369"><a href="#L-369"><span class="linenos">369</span></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+</span><span id="L-370"><a href="#L-370"><span class="linenos">370</span></a>                <span class="sa">f</span><span class="s2">"need at least 3 prints with label </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> to fill every split, got </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2">"</span>
+</span><span id="L-371"><a href="#L-371"><span class="linenos">371</span></a>            <span class="p">)</span>
+</span><span id="L-372"><a href="#L-372"><span class="linenos">372</span></a>        <span class="n">ids</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">permutation</span><span class="p">(</span><span class="n">ids</span><span class="p">)</span>
+</span><span id="L-373"><a href="#L-373"><span class="linenos">373</span></a>        <span class="c1"># Round half up; Python's round() rounds half to even (round(4.5) == 4).</span>
+</span><span id="L-374"><a href="#L-374"><span class="linenos">374</span></a>        <span class="n">n_test</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">n</span> <span class="o">*</span> <span class="n">test_frac</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)))</span>
+</span><span id="L-375"><a href="#L-375"><span class="linenos">375</span></a>        <span class="n">n_val</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">n</span> <span class="o">*</span> <span class="n">val_frac</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)))</span>
+</span><span id="L-376"><a href="#L-376"><span class="linenos">376</span></a>        <span class="k">if</span> <span class="n">n</span> <span class="o">-</span> <span class="n">n_test</span> <span class="o">-</span> <span class="n">n_val</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+</span><span id="L-377"><a href="#L-377"><span class="linenos">377</span></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"no label-</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> prints left for training; lower the fractions"</span><span class="p">)</span>
+</span><span id="L-378"><a href="#L-378"><span class="linenos">378</span></a>        <span class="n">split_ids</span><span class="p">[</span><span class="s2">"test"</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">ids</span><span class="p">[:</span><span class="n">n_test</span><span class="p">])</span>
+</span><span id="L-379"><a href="#L-379"><span class="linenos">379</span></a>        <span class="n">split_ids</span><span class="p">[</span><span class="s2">"val"</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">ids</span><span class="p">[</span><span class="n">n_test</span> <span class="p">:</span> <span class="n">n_test</span> <span class="o">+</span> <span class="n">n_val</span><span class="p">])</span>
+</span><span id="L-380"><a href="#L-380"><span class="linenos">380</span></a>        <span class="n">split_ids</span><span class="p">[</span><span class="s2">"train"</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">ids</span><span class="p">[</span><span class="n">n_test</span> <span class="o">+</span> <span class="n">n_val</span> <span class="p">:])</span>
+</span><span id="L-381"><a href="#L-381"><span class="linenos">381</span></a>
+</span><span id="L-382"><a href="#L-382"><span class="linenos">382</span></a>    <span class="n">split</span> <span class="o">=</span> <span class="n">DataSplit</span><span class="p">(</span>
+</span><span id="L-383"><a href="#L-383"><span class="linenos">383</span></a>        <span class="o">*</span><span class="p">(</span>
+</span><span id="L-384"><a href="#L-384"><span class="linenos">384</span></a>            <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s2">"print_id"</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">split_ids</span><span class="p">[</span><span class="n">name</span><span class="p">])]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="L-385"><a href="#L-385"><span class="linenos">385</span></a>            <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">DataSplit</span><span class="o">.</span><span class="n">_fields</span>
+</span><span id="L-386"><a href="#L-386"><span class="linenos">386</span></a>        <span class="p">)</span>
+</span><span id="L-387"><a href="#L-387"><span class="linenos">387</span></a>    <span class="p">)</span>
+</span><span id="L-388"><a href="#L-388"><span class="linenos">388</span></a>    <span class="n">check_no_print_leakage</span><span class="p">(</span><span class="n">split</span><span class="p">)</span>
+</span><span id="L-389"><a href="#L-389"><span class="linenos">389</span></a>    <span class="k">return</span> <span class="n">split</span>
+</span><span id="L-390"><a href="#L-390"><span class="linenos">390</span></a>
+</span><span id="L-391"><a href="#L-391"><span class="linenos">391</span></a>
+</span><span id="L-392"><a href="#L-392"><span class="linenos">392</span></a><span class="k">def</span><span class="w"> </span><span class="nf">check_no_print_leakage</span><span class="p">(</span><span class="n">split</span><span class="p">):</span>
+</span><span id="L-393"><a href="#L-393"><span class="linenos">393</span></a><span class="w">    </span><span class="sd">"""Check that no print appears in more than one split.</span>
+</span><span id="L-394"><a href="#L-394"><span class="linenos">394</span></a>
+</span><span id="L-395"><a href="#L-395"><span class="linenos">395</span></a><span class="sd">    Parameters</span>
+</span><span id="L-396"><a href="#L-396"><span class="linenos">396</span></a><span class="sd">    ----------</span>
+</span><span id="L-397"><a href="#L-397"><span class="linenos">397</span></a><span class="sd">    split : DataSplit or sequence of pandas.DataFrame</span>
+</span><span id="L-398"><a href="#L-398"><span class="linenos">398</span></a><span class="sd">        DataFrames with a ``print_id`` column.</span>
+</span><span id="L-399"><a href="#L-399"><span class="linenos">399</span></a>
+</span><span id="L-400"><a href="#L-400"><span class="linenos">400</span></a><span class="sd">    Raises</span>
+</span><span id="L-401"><a href="#L-401"><span class="linenos">401</span></a><span class="sd">    ------</span>
+</span><span id="L-402"><a href="#L-402"><span class="linenos">402</span></a><span class="sd">    ValueError</span>
+</span><span id="L-403"><a href="#L-403"><span class="linenos">403</span></a><span class="sd">        If any ``print_id`` is shared between two of the DataFrames.</span>
+</span><span id="L-404"><a href="#L-404"><span class="linenos">404</span></a><span class="sd">    """</span>
+</span><span id="L-405"><a href="#L-405"><span class="linenos">405</span></a>    <span class="n">seen</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="L-406"><a href="#L-406"><span class="linenos">406</span></a>    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">part</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">split</span><span class="p">):</span>
+</span><span id="L-407"><a href="#L-407"><span class="linenos">407</span></a>        <span class="k">for</span> <span class="n">pid</span> <span class="ow">in</span> <span class="n">part</span><span class="p">[</span><span class="s2">"print_id"</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">():</span>
+</span><span id="L-408"><a href="#L-408"><span class="linenos">408</span></a>            <span class="k">if</span> <span class="n">pid</span> <span class="ow">in</span> <span class="n">seen</span><span class="p">:</span>
+</span><span id="L-409"><a href="#L-409"><span class="linenos">409</span></a>                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"print </span><span class="si">{</span><span class="n">pid</span><span class="si">}</span><span class="s2"> is in splits </span><span class="si">{</span><span class="n">seen</span><span class="p">[</span><span class="n">pid</span><span class="p">]</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="L-410"><a href="#L-410"><span class="linenos">410</span></a>            <span class="n">seen</span><span class="p">[</span><span class="n">pid</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
 </span></pre></div>
 
 
@@ -834,6 +884,101 @@ printer, or <code>check_files</code> is True without <code>image_dir</code>.</li
 
 
                 </section>
+                <section id="make_subset">
+                            <input id="make_subset-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">make_subset</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">df</span>, </span><span class="param"><span class="n">frames_per_print</span><span class="o">=</span><span class="mi">120</span></span><span class="return-annotation">):</span></span>
+
+                <label class="view-source-button" for="make_subset-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#make_subset"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="make_subset-186"><a href="#make_subset-186"><span class="linenos">186</span></a><span class="k">def</span><span class="w"> </span><span class="nf">make_subset</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">frames_per_print</span><span class="o">=</span><span class="mi">120</span><span class="p">):</span>
+</span><span id="make_subset-187"><a href="#make_subset-187"><span class="linenos">187</span></a><span class="w">    </span><span class="sd">"""Select up to ``frames_per_print`` evenly spaced frames from every print.</span>
+</span><span id="make_subset-188"><a href="#make_subset-188"><span class="linenos">188</span></a>
+</span><span id="make_subset-189"><a href="#make_subset-189"><span class="linenos">189</span></a><span class="sd">    This is how ``data/train_subset.csv`` was made from the competition's</span>
+</span><span id="make_subset-190"><a href="#make_subset-190"><span class="linenos">190</span></a><span class="sd">    ``train.csv``. Rows are sorted by ``img_path`` (which orders each print's</span>
+</span><span id="make_subset-191"><a href="#make_subset-191"><span class="linenos">191</span></a><span class="sd">    frames by timestamp) and grouped by ``print_id``. For a print with ``n``</span>
+</span><span id="make_subset-192"><a href="#make_subset-192"><span class="linenos">192</span></a><span class="sd">    frames, the row positions ``np.linspace(0, n - 1, min(frames_per_print, n))``</span>
+</span><span id="make_subset-193"><a href="#make_subset-193"><span class="linenos">193</span></a><span class="sd">    are rounded to integers and deduplicated. Note that ``np.round`` rounds</span>
+</span><span id="make_subset-194"><a href="#make_subset-194"><span class="linenos">194</span></a><span class="sd">    halves to even (4.5 -&gt; 4), which the committed subset relies on. Prints are</span>
+</span><span id="make_subset-195"><a href="#make_subset-195"><span class="linenos">195</span></a><span class="sd">    concatenated in ``print_id`` order.</span>
+</span><span id="make_subset-196"><a href="#make_subset-196"><span class="linenos">196</span></a>
+</span><span id="make_subset-197"><a href="#make_subset-197"><span class="linenos">197</span></a><span class="sd">    Parameters</span>
+</span><span id="make_subset-198"><a href="#make_subset-198"><span class="linenos">198</span></a><span class="sd">    ----------</span>
+</span><span id="make_subset-199"><a href="#make_subset-199"><span class="linenos">199</span></a><span class="sd">    df : pandas.DataFrame</span>
+</span><span id="make_subset-200"><a href="#make_subset-200"><span class="linenos">200</span></a><span class="sd">        Metadata with at least ``img_path`` and ``print_id`` columns,</span>
+</span><span id="make_subset-201"><a href="#make_subset-201"><span class="linenos">201</span></a><span class="sd">        e.g. the full ``train.csv``.</span>
+</span><span id="make_subset-202"><a href="#make_subset-202"><span class="linenos">202</span></a><span class="sd">    frames_per_print : int, default 120</span>
+</span><span id="make_subset-203"><a href="#make_subset-203"><span class="linenos">203</span></a><span class="sd">        Maximum frames kept per print; prints with fewer keep all of them.</span>
+</span><span id="make_subset-204"><a href="#make_subset-204"><span class="linenos">204</span></a>
+</span><span id="make_subset-205"><a href="#make_subset-205"><span class="linenos">205</span></a><span class="sd">    Returns</span>
+</span><span id="make_subset-206"><a href="#make_subset-206"><span class="linenos">206</span></a><span class="sd">    -------</span>
+</span><span id="make_subset-207"><a href="#make_subset-207"><span class="linenos">207</span></a><span class="sd">    pandas.DataFrame</span>
+</span><span id="make_subset-208"><a href="#make_subset-208"><span class="linenos">208</span></a><span class="sd">        The selected rows, same columns as ``df``, with a fresh index.</span>
+</span><span id="make_subset-209"><a href="#make_subset-209"><span class="linenos">209</span></a>
+</span><span id="make_subset-210"><a href="#make_subset-210"><span class="linenos">210</span></a><span class="sd">    Raises</span>
+</span><span id="make_subset-211"><a href="#make_subset-211"><span class="linenos">211</span></a><span class="sd">    ------</span>
+</span><span id="make_subset-212"><a href="#make_subset-212"><span class="linenos">212</span></a><span class="sd">    ValueError</span>
+</span><span id="make_subset-213"><a href="#make_subset-213"><span class="linenos">213</span></a><span class="sd">        If a required column is missing, ``df`` is empty, or</span>
+</span><span id="make_subset-214"><a href="#make_subset-214"><span class="linenos">214</span></a><span class="sd">        ``frames_per_print`` is not a positive integer.</span>
+</span><span id="make_subset-215"><a href="#make_subset-215"><span class="linenos">215</span></a><span class="sd">    """</span>
+</span><span id="make_subset-216"><a href="#make_subset-216"><span class="linenos">216</span></a>    <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"img_path"</span><span class="p">,</span> <span class="s2">"print_id"</span><span class="p">)</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+</span><span id="make_subset-217"><a href="#make_subset-217"><span class="linenos">217</span></a>    <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+</span><span id="make_subset-218"><a href="#make_subset-218"><span class="linenos">218</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"df is missing columns: </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="make_subset-219"><a href="#make_subset-219"><span class="linenos">219</span></a>    <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+</span><span id="make_subset-220"><a href="#make_subset-220"><span class="linenos">220</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"df has no rows"</span><span class="p">)</span>
+</span><span id="make_subset-221"><a href="#make_subset-221"><span class="linenos">221</span></a>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">frames_per_print</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">frames_per_print</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">))</span> <span class="ow">or</span> <span class="n">frames_per_print</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+</span><span id="make_subset-222"><a href="#make_subset-222"><span class="linenos">222</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"frames_per_print must be a positive integer, got </span><span class="si">{</span><span class="n">frames_per_print</span><span class="si">!r}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="make_subset-223"><a href="#make_subset-223"><span class="linenos">223</span></a>
+</span><span id="make_subset-224"><a href="#make_subset-224"><span class="linenos">224</span></a>    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s2">"img_path"</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="s2">"stable"</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="make_subset-225"><a href="#make_subset-225"><span class="linenos">225</span></a>    <span class="n">parts</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="make_subset-226"><a href="#make_subset-226"><span class="linenos">226</span></a>    <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">frames</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"print_id"</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+</span><span id="make_subset-227"><a href="#make_subset-227"><span class="linenos">227</span></a>        <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">frames</span><span class="p">)</span>
+</span><span id="make_subset-228"><a href="#make_subset-228"><span class="linenos">228</span></a>        <span class="n">positions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">frames_per_print</span><span class="p">,</span> <span class="n">n</span><span class="p">))</span><span class="o">.</span><span class="n">round</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">))</span>
+</span><span id="make_subset-229"><a href="#make_subset-229"><span class="linenos">229</span></a>        <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">frames</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">positions</span><span class="p">])</span>
+</span><span id="make_subset-230"><a href="#make_subset-230"><span class="linenos">230</span></a>    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">parts</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Select up to <code>frames_per_print</code> evenly spaced frames from every print.</p>
+
+<p>This is how <code>data/train_subset.csv</code> was made from the competition's
+<code>train.csv</code>. Rows are sorted by <code>img_path</code> (which orders each print's
+frames by timestamp) and grouped by <code>print_id</code>. For a print with <code>n</code>
+frames, the row positions <code>np.linspace(0, n - 1, min(frames_per_print, n))</code>
+are rounded to integers and deduplicated. Note that <code>np.round</code> rounds
+halves to even (4.5 -> 4), which the committed subset relies on. Prints are
+concatenated in <code>print_id</code> order.</p>
+
+<h6 id="parameters">Parameters</h6>
+
+<ul>
+<li><strong>df</strong> (pandas.DataFrame):
+Metadata with at least <code>img_path</code> and <code>print_id</code> columns,
+e.g. the full <code>train.csv</code>.</li>
+<li><strong>frames_per_print</strong> (int, default 120):
+Maximum frames kept per print; prints with fewer keep all of them.</li>
+</ul>
+
+<h6 id="returns">Returns</h6>
+
+<ul>
+<li><strong>pandas.DataFrame</strong>: The selected rows, same columns as <code>df</code>, with a fresh index.</li>
+</ul>
+
+<h6 id="raises">Raises</h6>
+
+<ul>
+<li><strong>ValueError</strong>: If a required column is missing, <code>df</code> is empty, or
+<code>frames_per_print</code> is not a positive integer.</li>
+</ul>
+</div>
+
+
+                </section>
                 <section id="load_image">
                             <input id="load_image-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
@@ -845,46 +990,46 @@ printer, or <code>check_files</code> is True without <code>image_dir</code>.</li
 
     </div>
     <a class="headerlink" href="#load_image"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="load_image-186"><a href="#load_image-186"><span class="linenos">186</span></a><span class="k">def</span><span class="w"> </span><span class="nf">load_image</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">DEFAULT_IMAGE_SIZE</span><span class="p">):</span>
-</span><span id="load_image-187"><a href="#load_image-187"><span class="linenos">187</span></a><span class="w">    </span><span class="sd">"""Load one image as a square RGB array scaled to [0, 1].</span>
-</span><span id="load_image-188"><a href="#load_image-188"><span class="linenos">188</span></a>
-</span><span id="load_image-189"><a href="#load_image-189"><span class="linenos">189</span></a><span class="sd">    Parameters</span>
-</span><span id="load_image-190"><a href="#load_image-190"><span class="linenos">190</span></a><span class="sd">    ----------</span>
-</span><span id="load_image-191"><a href="#load_image-191"><span class="linenos">191</span></a><span class="sd">    path : str or Path</span>
-</span><span id="load_image-192"><a href="#load_image-192"><span class="linenos">192</span></a><span class="sd">        JPEG or PNG file. Greyscale and RGBA images are converted to RGB.</span>
-</span><span id="load_image-193"><a href="#load_image-193"><span class="linenos">193</span></a><span class="sd">    size : int, default ``config.DEFAULT_IMAGE_SIZE``</span>
-</span><span id="load_image-194"><a href="#load_image-194"><span class="linenos">194</span></a><span class="sd">        Output side length in pixels; the image is resized (bilinear) to</span>
-</span><span id="load_image-195"><a href="#load_image-195"><span class="linenos">195</span></a><span class="sd">        ``size x size`` without preserving aspect ratio.</span>
-</span><span id="load_image-196"><a href="#load_image-196"><span class="linenos">196</span></a>
-</span><span id="load_image-197"><a href="#load_image-197"><span class="linenos">197</span></a><span class="sd">    Returns</span>
-</span><span id="load_image-198"><a href="#load_image-198"><span class="linenos">198</span></a><span class="sd">    -------</span>
-</span><span id="load_image-199"><a href="#load_image-199"><span class="linenos">199</span></a><span class="sd">    numpy.ndarray</span>
-</span><span id="load_image-200"><a href="#load_image-200"><span class="linenos">200</span></a><span class="sd">        Array of shape ``(size, size, 3)``, dtype float32, values in [0, 1].</span>
-</span><span id="load_image-201"><a href="#load_image-201"><span class="linenos">201</span></a>
-</span><span id="load_image-202"><a href="#load_image-202"><span class="linenos">202</span></a><span class="sd">    Raises</span>
-</span><span id="load_image-203"><a href="#load_image-203"><span class="linenos">203</span></a><span class="sd">    ------</span>
-</span><span id="load_image-204"><a href="#load_image-204"><span class="linenos">204</span></a><span class="sd">    TypeError</span>
-</span><span id="load_image-205"><a href="#load_image-205"><span class="linenos">205</span></a><span class="sd">        If ``size`` is not an integer.</span>
-</span><span id="load_image-206"><a href="#load_image-206"><span class="linenos">206</span></a><span class="sd">    ValueError</span>
-</span><span id="load_image-207"><a href="#load_image-207"><span class="linenos">207</span></a><span class="sd">        If ``size`` is not positive or the file is not a readable image.</span>
-</span><span id="load_image-208"><a href="#load_image-208"><span class="linenos">208</span></a><span class="sd">    FileNotFoundError</span>
-</span><span id="load_image-209"><a href="#load_image-209"><span class="linenos">209</span></a><span class="sd">        If ``path`` does not exist.</span>
-</span><span id="load_image-210"><a href="#load_image-210"><span class="linenos">210</span></a><span class="sd">    """</span>
-</span><span id="load_image-211"><a href="#load_image-211"><span class="linenos">211</span></a>    <span class="c1"># bool is a subclass of int, but size=True is certainly a mistake.</span>
-</span><span id="load_image-212"><a href="#load_image-212"><span class="linenos">212</span></a>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
-</span><span id="load_image-213"><a href="#load_image-213"><span class="linenos">213</span></a>        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"size must be an integer, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">size</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="load_image-214"><a href="#load_image-214"><span class="linenos">214</span></a>    <span class="k">if</span> <span class="n">size</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
-</span><span id="load_image-215"><a href="#load_image-215"><span class="linenos">215</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"size must be positive, got </span><span class="si">{</span><span class="n">size</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="load_image-216"><a href="#load_image-216"><span class="linenos">216</span></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-</span><span id="load_image-217"><a href="#load_image-217"><span class="linenos">217</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
-</span><span id="load_image-218"><a href="#load_image-218"><span class="linenos">218</span></a>        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"image not found: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="load_image-219"><a href="#load_image-219"><span class="linenos">219</span></a>    <span class="k">try</span><span class="p">:</span>
-</span><span id="load_image-220"><a href="#load_image-220"><span class="linenos">220</span></a>        <span class="k">with</span> <span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">img</span><span class="p">:</span>
-</span><span id="load_image-221"><a href="#load_image-221"><span class="linenos">221</span></a>            <span class="n">img</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s2">"RGB"</span><span class="p">)</span><span class="o">.</span><span class="n">resize</span><span class="p">((</span><span class="n">size</span><span class="p">,</span> <span class="n">size</span><span class="p">),</span> <span class="n">Image</span><span class="o">.</span><span class="n">Resampling</span><span class="o">.</span><span class="n">BILINEAR</span><span class="p">)</span>
-</span><span id="load_image-222"><a href="#load_image-222"><span class="linenos">222</span></a>            <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
-</span><span id="load_image-223"><a href="#load_image-223"><span class="linenos">223</span></a>    <span class="k">except</span> <span class="n">UnidentifiedImageError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
-</span><span id="load_image-224"><a href="#load_image-224"><span class="linenos">224</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"not a readable image: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">err</span>
-</span><span id="load_image-225"><a href="#load_image-225"><span class="linenos">225</span></a>    <span class="k">return</span> <span class="n">arr</span> <span class="o">/</span> <span class="mf">255.0</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="load_image-233"><a href="#load_image-233"><span class="linenos">233</span></a><span class="k">def</span><span class="w"> </span><span class="nf">load_image</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">DEFAULT_IMAGE_SIZE</span><span class="p">):</span>
+</span><span id="load_image-234"><a href="#load_image-234"><span class="linenos">234</span></a><span class="w">    </span><span class="sd">"""Load one image as a square RGB array scaled to [0, 1].</span>
+</span><span id="load_image-235"><a href="#load_image-235"><span class="linenos">235</span></a>
+</span><span id="load_image-236"><a href="#load_image-236"><span class="linenos">236</span></a><span class="sd">    Parameters</span>
+</span><span id="load_image-237"><a href="#load_image-237"><span class="linenos">237</span></a><span class="sd">    ----------</span>
+</span><span id="load_image-238"><a href="#load_image-238"><span class="linenos">238</span></a><span class="sd">    path : str or Path</span>
+</span><span id="load_image-239"><a href="#load_image-239"><span class="linenos">239</span></a><span class="sd">        JPEG or PNG file. Greyscale and RGBA images are converted to RGB.</span>
+</span><span id="load_image-240"><a href="#load_image-240"><span class="linenos">240</span></a><span class="sd">    size : int, default ``config.DEFAULT_IMAGE_SIZE``</span>
+</span><span id="load_image-241"><a href="#load_image-241"><span class="linenos">241</span></a><span class="sd">        Output side length in pixels; the image is resized (bilinear) to</span>
+</span><span id="load_image-242"><a href="#load_image-242"><span class="linenos">242</span></a><span class="sd">        ``size x size`` without preserving aspect ratio.</span>
+</span><span id="load_image-243"><a href="#load_image-243"><span class="linenos">243</span></a>
+</span><span id="load_image-244"><a href="#load_image-244"><span class="linenos">244</span></a><span class="sd">    Returns</span>
+</span><span id="load_image-245"><a href="#load_image-245"><span class="linenos">245</span></a><span class="sd">    -------</span>
+</span><span id="load_image-246"><a href="#load_image-246"><span class="linenos">246</span></a><span class="sd">    numpy.ndarray</span>
+</span><span id="load_image-247"><a href="#load_image-247"><span class="linenos">247</span></a><span class="sd">        Array of shape ``(size, size, 3)``, dtype float32, values in [0, 1].</span>
+</span><span id="load_image-248"><a href="#load_image-248"><span class="linenos">248</span></a>
+</span><span id="load_image-249"><a href="#load_image-249"><span class="linenos">249</span></a><span class="sd">    Raises</span>
+</span><span id="load_image-250"><a href="#load_image-250"><span class="linenos">250</span></a><span class="sd">    ------</span>
+</span><span id="load_image-251"><a href="#load_image-251"><span class="linenos">251</span></a><span class="sd">    TypeError</span>
+</span><span id="load_image-252"><a href="#load_image-252"><span class="linenos">252</span></a><span class="sd">        If ``size`` is not an integer.</span>
+</span><span id="load_image-253"><a href="#load_image-253"><span class="linenos">253</span></a><span class="sd">    ValueError</span>
+</span><span id="load_image-254"><a href="#load_image-254"><span class="linenos">254</span></a><span class="sd">        If ``size`` is not positive or the file is not a readable image.</span>
+</span><span id="load_image-255"><a href="#load_image-255"><span class="linenos">255</span></a><span class="sd">    FileNotFoundError</span>
+</span><span id="load_image-256"><a href="#load_image-256"><span class="linenos">256</span></a><span class="sd">        If ``path`` does not exist.</span>
+</span><span id="load_image-257"><a href="#load_image-257"><span class="linenos">257</span></a><span class="sd">    """</span>
+</span><span id="load_image-258"><a href="#load_image-258"><span class="linenos">258</span></a>    <span class="c1"># bool is a subclass of int, but size=True is certainly a mistake.</span>
+</span><span id="load_image-259"><a href="#load_image-259"><span class="linenos">259</span></a>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">)):</span>
+</span><span id="load_image-260"><a href="#load_image-260"><span class="linenos">260</span></a>        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"size must be an integer, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">size</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="load_image-261"><a href="#load_image-261"><span class="linenos">261</span></a>    <span class="k">if</span> <span class="n">size</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+</span><span id="load_image-262"><a href="#load_image-262"><span class="linenos">262</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"size must be positive, got </span><span class="si">{</span><span class="n">size</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="load_image-263"><a href="#load_image-263"><span class="linenos">263</span></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+</span><span id="load_image-264"><a href="#load_image-264"><span class="linenos">264</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+</span><span id="load_image-265"><a href="#load_image-265"><span class="linenos">265</span></a>        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"image not found: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="load_image-266"><a href="#load_image-266"><span class="linenos">266</span></a>    <span class="k">try</span><span class="p">:</span>
+</span><span id="load_image-267"><a href="#load_image-267"><span class="linenos">267</span></a>        <span class="k">with</span> <span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">img</span><span class="p">:</span>
+</span><span id="load_image-268"><a href="#load_image-268"><span class="linenos">268</span></a>            <span class="n">img</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s2">"RGB"</span><span class="p">)</span><span class="o">.</span><span class="n">resize</span><span class="p">((</span><span class="n">size</span><span class="p">,</span> <span class="n">size</span><span class="p">),</span> <span class="n">Image</span><span class="o">.</span><span class="n">Resampling</span><span class="o">.</span><span class="n">BILINEAR</span><span class="p">)</span>
+</span><span id="load_image-269"><a href="#load_image-269"><span class="linenos">269</span></a>            <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+</span><span id="load_image-270"><a href="#load_image-270"><span class="linenos">270</span></a>    <span class="k">except</span> <span class="n">UnidentifiedImageError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+</span><span id="load_image-271"><a href="#load_image-271"><span class="linenos">271</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"not a readable image: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">err</span>
+</span><span id="load_image-272"><a href="#load_image-272"><span class="linenos">272</span></a>    <span class="k">return</span> <span class="n">arr</span> <span class="o">/</span> <span class="mf">255.0</span>
 </span></pre></div>
 
 
@@ -928,30 +1073,30 @@ Output side length in pixels; the image is resized (bilinear) to
 
     </div>
     <a class="headerlink" href="#load_images"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="load_images-228"><a href="#load_images-228"><span class="linenos">228</span></a><span class="k">def</span><span class="w"> </span><span class="nf">load_images</span><span class="p">(</span><span class="n">paths</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">DEFAULT_IMAGE_SIZE</span><span class="p">):</span>
-</span><span id="load_images-229"><a href="#load_images-229"><span class="linenos">229</span></a><span class="w">    </span><span class="sd">"""Load several images into one array.</span>
-</span><span id="load_images-230"><a href="#load_images-230"><span class="linenos">230</span></a>
-</span><span id="load_images-231"><a href="#load_images-231"><span class="linenos">231</span></a><span class="sd">    Parameters</span>
-</span><span id="load_images-232"><a href="#load_images-232"><span class="linenos">232</span></a><span class="sd">    ----------</span>
-</span><span id="load_images-233"><a href="#load_images-233"><span class="linenos">233</span></a><span class="sd">    paths : sequence of str or Path</span>
-</span><span id="load_images-234"><a href="#load_images-234"><span class="linenos">234</span></a><span class="sd">        Image files, e.g. the ``path`` column from :func:`load_metadata`.</span>
-</span><span id="load_images-235"><a href="#load_images-235"><span class="linenos">235</span></a><span class="sd">    size : int, default ``config.DEFAULT_IMAGE_SIZE``</span>
-</span><span id="load_images-236"><a href="#load_images-236"><span class="linenos">236</span></a><span class="sd">        Output side length in pixels.</span>
-</span><span id="load_images-237"><a href="#load_images-237"><span class="linenos">237</span></a>
-</span><span id="load_images-238"><a href="#load_images-238"><span class="linenos">238</span></a><span class="sd">    Returns</span>
-</span><span id="load_images-239"><a href="#load_images-239"><span class="linenos">239</span></a><span class="sd">    -------</span>
-</span><span id="load_images-240"><a href="#load_images-240"><span class="linenos">240</span></a><span class="sd">    numpy.ndarray</span>
-</span><span id="load_images-241"><a href="#load_images-241"><span class="linenos">241</span></a><span class="sd">        Array of shape ``(len(paths), size, size, 3)``, float32 in [0, 1].</span>
-</span><span id="load_images-242"><a href="#load_images-242"><span class="linenos">242</span></a>
-</span><span id="load_images-243"><a href="#load_images-243"><span class="linenos">243</span></a><span class="sd">    Raises</span>
-</span><span id="load_images-244"><a href="#load_images-244"><span class="linenos">244</span></a><span class="sd">    ------</span>
-</span><span id="load_images-245"><a href="#load_images-245"><span class="linenos">245</span></a><span class="sd">    ValueError</span>
-</span><span id="load_images-246"><a href="#load_images-246"><span class="linenos">246</span></a><span class="sd">        If ``paths`` is empty, or as for :func:`load_image`.</span>
-</span><span id="load_images-247"><a href="#load_images-247"><span class="linenos">247</span></a><span class="sd">    """</span>
-</span><span id="load_images-248"><a href="#load_images-248"><span class="linenos">248</span></a>    <span class="n">paths</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">paths</span><span class="p">)</span>
-</span><span id="load_images-249"><a href="#load_images-249"><span class="linenos">249</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">paths</span><span class="p">:</span>
-</span><span id="load_images-250"><a href="#load_images-250"><span class="linenos">250</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"paths is empty"</span><span class="p">)</span>
-</span><span id="load_images-251"><a href="#load_images-251"><span class="linenos">251</span></a>    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">load_image</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">])</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="load_images-275"><a href="#load_images-275"><span class="linenos">275</span></a><span class="k">def</span><span class="w"> </span><span class="nf">load_images</span><span class="p">(</span><span class="n">paths</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">DEFAULT_IMAGE_SIZE</span><span class="p">):</span>
+</span><span id="load_images-276"><a href="#load_images-276"><span class="linenos">276</span></a><span class="w">    </span><span class="sd">"""Load several images into one array.</span>
+</span><span id="load_images-277"><a href="#load_images-277"><span class="linenos">277</span></a>
+</span><span id="load_images-278"><a href="#load_images-278"><span class="linenos">278</span></a><span class="sd">    Parameters</span>
+</span><span id="load_images-279"><a href="#load_images-279"><span class="linenos">279</span></a><span class="sd">    ----------</span>
+</span><span id="load_images-280"><a href="#load_images-280"><span class="linenos">280</span></a><span class="sd">    paths : sequence of str or Path</span>
+</span><span id="load_images-281"><a href="#load_images-281"><span class="linenos">281</span></a><span class="sd">        Image files, e.g. the ``path`` column from :func:`load_metadata`.</span>
+</span><span id="load_images-282"><a href="#load_images-282"><span class="linenos">282</span></a><span class="sd">    size : int, default ``config.DEFAULT_IMAGE_SIZE``</span>
+</span><span id="load_images-283"><a href="#load_images-283"><span class="linenos">283</span></a><span class="sd">        Output side length in pixels.</span>
+</span><span id="load_images-284"><a href="#load_images-284"><span class="linenos">284</span></a>
+</span><span id="load_images-285"><a href="#load_images-285"><span class="linenos">285</span></a><span class="sd">    Returns</span>
+</span><span id="load_images-286"><a href="#load_images-286"><span class="linenos">286</span></a><span class="sd">    -------</span>
+</span><span id="load_images-287"><a href="#load_images-287"><span class="linenos">287</span></a><span class="sd">    numpy.ndarray</span>
+</span><span id="load_images-288"><a href="#load_images-288"><span class="linenos">288</span></a><span class="sd">        Array of shape ``(len(paths), size, size, 3)``, float32 in [0, 1].</span>
+</span><span id="load_images-289"><a href="#load_images-289"><span class="linenos">289</span></a>
+</span><span id="load_images-290"><a href="#load_images-290"><span class="linenos">290</span></a><span class="sd">    Raises</span>
+</span><span id="load_images-291"><a href="#load_images-291"><span class="linenos">291</span></a><span class="sd">    ------</span>
+</span><span id="load_images-292"><a href="#load_images-292"><span class="linenos">292</span></a><span class="sd">    ValueError</span>
+</span><span id="load_images-293"><a href="#load_images-293"><span class="linenos">293</span></a><span class="sd">        If ``paths`` is empty, or as for :func:`load_image`.</span>
+</span><span id="load_images-294"><a href="#load_images-294"><span class="linenos">294</span></a><span class="sd">    """</span>
+</span><span id="load_images-295"><a href="#load_images-295"><span class="linenos">295</span></a>    <span class="n">paths</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">paths</span><span class="p">)</span>
+</span><span id="load_images-296"><a href="#load_images-296"><span class="linenos">296</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">paths</span><span class="p">:</span>
+</span><span id="load_images-297"><a href="#load_images-297"><span class="linenos">297</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"paths is empty"</span><span class="p">)</span>
+</span><span id="load_images-298"><a href="#load_images-298"><span class="linenos">298</span></a>    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">load_image</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">])</span>
 </span></pre></div>
 
 
@@ -992,30 +1137,30 @@ Output side length in pixels.</li>
 
     </div>
     <a class="headerlink" href="#print_table"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="print_table-254"><a href="#print_table-254"><span class="linenos">254</span></a><span class="k">def</span><span class="w"> </span><span class="nf">print_table</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
-</span><span id="print_table-255"><a href="#print_table-255"><span class="linenos">255</span></a><span class="w">    </span><span class="sd">"""Summarise metadata to one row per print.</span>
-</span><span id="print_table-256"><a href="#print_table-256"><span class="linenos">256</span></a>
-</span><span id="print_table-257"><a href="#print_table-257"><span class="linenos">257</span></a><span class="sd">    Parameters</span>
-</span><span id="print_table-258"><a href="#print_table-258"><span class="linenos">258</span></a><span class="sd">    ----------</span>
-</span><span id="print_table-259"><a href="#print_table-259"><span class="linenos">259</span></a><span class="sd">    df : pandas.DataFrame</span>
-</span><span id="print_table-260"><a href="#print_table-260"><span class="linenos">260</span></a><span class="sd">        Validated metadata.</span>
-</span><span id="print_table-261"><a href="#print_table-261"><span class="linenos">261</span></a>
-</span><span id="print_table-262"><a href="#print_table-262"><span class="linenos">262</span></a><span class="sd">    Returns</span>
-</span><span id="print_table-263"><a href="#print_table-263"><span class="linenos">263</span></a><span class="sd">    -------</span>
-</span><span id="print_table-264"><a href="#print_table-264"><span class="linenos">264</span></a><span class="sd">    pandas.DataFrame</span>
-</span><span id="print_table-265"><a href="#print_table-265"><span class="linenos">265</span></a><span class="sd">        Columns ``print_id``, ``printer_id``, ``has_under_extrusion`` and</span>
-</span><span id="print_table-266"><a href="#print_table-266"><span class="linenos">266</span></a><span class="sd">        ``n_frames``, sorted by ``print_id``.</span>
-</span><span id="print_table-267"><a href="#print_table-267"><span class="linenos">267</span></a><span class="sd">    """</span>
-</span><span id="print_table-268"><a href="#print_table-268"><span class="linenos">268</span></a>    <span class="k">return</span> <span class="p">(</span>
-</span><span id="print_table-269"><a href="#print_table-269"><span class="linenos">269</span></a>        <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"print_id"</span><span class="p">)</span>
-</span><span id="print_table-270"><a href="#print_table-270"><span class="linenos">270</span></a>        <span class="o">.</span><span class="n">agg</span><span class="p">(</span>
-</span><span id="print_table-271"><a href="#print_table-271"><span class="linenos">271</span></a>            <span class="n">printer_id</span><span class="o">=</span><span class="p">(</span><span class="s2">"printer_id"</span><span class="p">,</span> <span class="s2">"first"</span><span class="p">),</span>
-</span><span id="print_table-272"><a href="#print_table-272"><span class="linenos">272</span></a>            <span class="n">has_under_extrusion</span><span class="o">=</span><span class="p">(</span><span class="n">LABEL_COLUMN</span><span class="p">,</span> <span class="s2">"first"</span><span class="p">),</span>
-</span><span id="print_table-273"><a href="#print_table-273"><span class="linenos">273</span></a>            <span class="n">n_frames</span><span class="o">=</span><span class="p">(</span><span class="s2">"img_path"</span><span class="p">,</span> <span class="s2">"size"</span><span class="p">),</span>
-</span><span id="print_table-274"><a href="#print_table-274"><span class="linenos">274</span></a>        <span class="p">)</span>
-</span><span id="print_table-275"><a href="#print_table-275"><span class="linenos">275</span></a>        <span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
-</span><span id="print_table-276"><a href="#print_table-276"><span class="linenos">276</span></a>        <span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s2">"print_id"</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="print_table-277"><a href="#print_table-277"><span class="linenos">277</span></a>    <span class="p">)</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="print_table-301"><a href="#print_table-301"><span class="linenos">301</span></a><span class="k">def</span><span class="w"> </span><span class="nf">print_table</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
+</span><span id="print_table-302"><a href="#print_table-302"><span class="linenos">302</span></a><span class="w">    </span><span class="sd">"""Summarise metadata to one row per print.</span>
+</span><span id="print_table-303"><a href="#print_table-303"><span class="linenos">303</span></a>
+</span><span id="print_table-304"><a href="#print_table-304"><span class="linenos">304</span></a><span class="sd">    Parameters</span>
+</span><span id="print_table-305"><a href="#print_table-305"><span class="linenos">305</span></a><span class="sd">    ----------</span>
+</span><span id="print_table-306"><a href="#print_table-306"><span class="linenos">306</span></a><span class="sd">    df : pandas.DataFrame</span>
+</span><span id="print_table-307"><a href="#print_table-307"><span class="linenos">307</span></a><span class="sd">        Validated metadata.</span>
+</span><span id="print_table-308"><a href="#print_table-308"><span class="linenos">308</span></a>
+</span><span id="print_table-309"><a href="#print_table-309"><span class="linenos">309</span></a><span class="sd">    Returns</span>
+</span><span id="print_table-310"><a href="#print_table-310"><span class="linenos">310</span></a><span class="sd">    -------</span>
+</span><span id="print_table-311"><a href="#print_table-311"><span class="linenos">311</span></a><span class="sd">    pandas.DataFrame</span>
+</span><span id="print_table-312"><a href="#print_table-312"><span class="linenos">312</span></a><span class="sd">        Columns ``print_id``, ``printer_id``, ``has_under_extrusion`` and</span>
+</span><span id="print_table-313"><a href="#print_table-313"><span class="linenos">313</span></a><span class="sd">        ``n_frames``, sorted by ``print_id``.</span>
+</span><span id="print_table-314"><a href="#print_table-314"><span class="linenos">314</span></a><span class="sd">    """</span>
+</span><span id="print_table-315"><a href="#print_table-315"><span class="linenos">315</span></a>    <span class="k">return</span> <span class="p">(</span>
+</span><span id="print_table-316"><a href="#print_table-316"><span class="linenos">316</span></a>        <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"print_id"</span><span class="p">)</span>
+</span><span id="print_table-317"><a href="#print_table-317"><span class="linenos">317</span></a>        <span class="o">.</span><span class="n">agg</span><span class="p">(</span>
+</span><span id="print_table-318"><a href="#print_table-318"><span class="linenos">318</span></a>            <span class="n">printer_id</span><span class="o">=</span><span class="p">(</span><span class="s2">"printer_id"</span><span class="p">,</span> <span class="s2">"first"</span><span class="p">),</span>
+</span><span id="print_table-319"><a href="#print_table-319"><span class="linenos">319</span></a>            <span class="n">has_under_extrusion</span><span class="o">=</span><span class="p">(</span><span class="n">LABEL_COLUMN</span><span class="p">,</span> <span class="s2">"first"</span><span class="p">),</span>
+</span><span id="print_table-320"><a href="#print_table-320"><span class="linenos">320</span></a>            <span class="n">n_frames</span><span class="o">=</span><span class="p">(</span><span class="s2">"img_path"</span><span class="p">,</span> <span class="s2">"size"</span><span class="p">),</span>
+</span><span id="print_table-321"><a href="#print_table-321"><span class="linenos">321</span></a>        <span class="p">)</span>
+</span><span id="print_table-322"><a href="#print_table-322"><span class="linenos">322</span></a>        <span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+</span><span id="print_table-323"><a href="#print_table-323"><span class="linenos">323</span></a>        <span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s2">"print_id"</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="print_table-324"><a href="#print_table-324"><span class="linenos">324</span></a>    <span class="p">)</span>
 </span></pre></div>
 
 
@@ -1049,70 +1194,70 @@ Validated metadata.</li>
 
     </div>
     <a class="headerlink" href="#split_by_print"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="split_by_print-280"><a href="#split_by_print-280"><span class="linenos">280</span></a><span class="k">def</span><span class="w"> </span><span class="nf">split_by_print</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">val_frac</span><span class="o">=</span><span class="mf">0.15</span><span class="p">,</span> <span class="n">test_frac</span><span class="o">=</span><span class="mf">0.15</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">DEFAULT_SEED</span><span class="p">):</span>
-</span><span id="split_by_print-281"><a href="#split_by_print-281"><span class="linenos">281</span></a><span class="w">    </span><span class="sd">"""Split metadata into train/val/test by print, stratified by label.</span>
-</span><span id="split_by_print-282"><a href="#split_by_print-282"><span class="linenos">282</span></a>
-</span><span id="split_by_print-283"><a href="#split_by_print-283"><span class="linenos">283</span></a><span class="sd">    Whole prints are assigned to one split, so near-duplicate frames of the</span>
-</span><span id="split_by_print-284"><a href="#split_by_print-284"><span class="linenos">284</span></a><span class="sd">    same print can never appear on both sides of an evaluation. Good and</span>
-</span><span id="split_by_print-285"><a href="#split_by_print-285"><span class="linenos">285</span></a><span class="sd">    defective prints are shuffled and divided separately, so each split gets</span>
-</span><span id="split_by_print-286"><a href="#split_by_print-286"><span class="linenos">286</span></a><span class="sd">    about the same fraction of each class and at least one print of each.</span>
-</span><span id="split_by_print-287"><a href="#split_by_print-287"><span class="linenos">287</span></a>
-</span><span id="split_by_print-288"><a href="#split_by_print-288"><span class="linenos">288</span></a><span class="sd">    Parameters</span>
-</span><span id="split_by_print-289"><a href="#split_by_print-289"><span class="linenos">289</span></a><span class="sd">    ----------</span>
-</span><span id="split_by_print-290"><a href="#split_by_print-290"><span class="linenos">290</span></a><span class="sd">    df : pandas.DataFrame</span>
-</span><span id="split_by_print-291"><a href="#split_by_print-291"><span class="linenos">291</span></a><span class="sd">        Validated metadata (see :func:`validate_metadata`).</span>
-</span><span id="split_by_print-292"><a href="#split_by_print-292"><span class="linenos">292</span></a><span class="sd">    val_frac, test_frac : float, default 0.15</span>
-</span><span id="split_by_print-293"><a href="#split_by_print-293"><span class="linenos">293</span></a><span class="sd">        Fraction of the prints of each class sent to validation and test.</span>
-</span><span id="split_by_print-294"><a href="#split_by_print-294"><span class="linenos">294</span></a><span class="sd">        Each must be in (0, 1) and together less than 1. Counts are rounded</span>
-</span><span id="split_by_print-295"><a href="#split_by_print-295"><span class="linenos">295</span></a><span class="sd">        to the nearest whole print (halves round up), with a minimum of one.</span>
-</span><span id="split_by_print-296"><a href="#split_by_print-296"><span class="linenos">296</span></a><span class="sd">    seed : int, default ``config.DEFAULT_SEED``</span>
-</span><span id="split_by_print-297"><a href="#split_by_print-297"><span class="linenos">297</span></a><span class="sd">        Seed for the shuffle; the same seed always gives the same split.</span>
-</span><span id="split_by_print-298"><a href="#split_by_print-298"><span class="linenos">298</span></a>
-</span><span id="split_by_print-299"><a href="#split_by_print-299"><span class="linenos">299</span></a><span class="sd">    Returns</span>
-</span><span id="split_by_print-300"><a href="#split_by_print-300"><span class="linenos">300</span></a><span class="sd">    -------</span>
-</span><span id="split_by_print-301"><a href="#split_by_print-301"><span class="linenos">301</span></a><span class="sd">    DataSplit</span>
-</span><span id="split_by_print-302"><a href="#split_by_print-302"><span class="linenos">302</span></a><span class="sd">        ``(train, val, test)`` DataFrames with reset indexes.</span>
-</span><span id="split_by_print-303"><a href="#split_by_print-303"><span class="linenos">303</span></a>
-</span><span id="split_by_print-304"><a href="#split_by_print-304"><span class="linenos">304</span></a><span class="sd">    Raises</span>
-</span><span id="split_by_print-305"><a href="#split_by_print-305"><span class="linenos">305</span></a><span class="sd">    ------</span>
-</span><span id="split_by_print-306"><a href="#split_by_print-306"><span class="linenos">306</span></a><span class="sd">    ValueError</span>
-</span><span id="split_by_print-307"><a href="#split_by_print-307"><span class="linenos">307</span></a><span class="sd">        If the fractions are out of range, or a class has fewer than three</span>
-</span><span id="split_by_print-308"><a href="#split_by_print-308"><span class="linenos">308</span></a><span class="sd">        prints (one is needed per split).</span>
-</span><span id="split_by_print-309"><a href="#split_by_print-309"><span class="linenos">309</span></a><span class="sd">    """</span>
-</span><span id="split_by_print-310"><a href="#split_by_print-310"><span class="linenos">310</span></a>    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">frac</span> <span class="ow">in</span> <span class="p">((</span><span class="s2">"val_frac"</span><span class="p">,</span> <span class="n">val_frac</span><span class="p">),</span> <span class="p">(</span><span class="s2">"test_frac"</span><span class="p">,</span> <span class="n">test_frac</span><span class="p">)):</span>
-</span><span id="split_by_print-311"><a href="#split_by_print-311"><span class="linenos">311</span></a>        <span class="k">if</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">frac</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
-</span><span id="split_by_print-312"><a href="#split_by_print-312"><span class="linenos">312</span></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> must be in (0, 1), got </span><span class="si">{</span><span class="n">frac</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="split_by_print-313"><a href="#split_by_print-313"><span class="linenos">313</span></a>    <span class="k">if</span> <span class="n">val_frac</span> <span class="o">+</span> <span class="n">test_frac</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
-</span><span id="split_by_print-314"><a href="#split_by_print-314"><span class="linenos">314</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"val_frac + test_frac must be less than 1"</span><span class="p">)</span>
-</span><span id="split_by_print-315"><a href="#split_by_print-315"><span class="linenos">315</span></a>
-</span><span id="split_by_print-316"><a href="#split_by_print-316"><span class="linenos">316</span></a>    <span class="n">prints</span> <span class="o">=</span> <span class="n">print_table</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
-</span><span id="split_by_print-317"><a href="#split_by_print-317"><span class="linenos">317</span></a>    <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
-</span><span id="split_by_print-318"><a href="#split_by_print-318"><span class="linenos">318</span></a>    <span class="n">split_ids</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"train"</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">"val"</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">"test"</span><span class="p">:</span> <span class="p">[]}</span>
-</span><span id="split_by_print-319"><a href="#split_by_print-319"><span class="linenos">319</span></a>    <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
-</span><span id="split_by_print-320"><a href="#split_by_print-320"><span class="linenos">320</span></a>        <span class="n">ids</span> <span class="o">=</span> <span class="n">prints</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">prints</span><span class="p">[</span><span class="n">LABEL_COLUMN</span><span class="p">]</span> <span class="o">==</span> <span class="n">label</span><span class="p">,</span> <span class="s2">"print_id"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
-</span><span id="split_by_print-321"><a href="#split_by_print-321"><span class="linenos">321</span></a>        <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ids</span><span class="p">)</span>
-</span><span id="split_by_print-322"><a href="#split_by_print-322"><span class="linenos">322</span></a>        <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
-</span><span id="split_by_print-323"><a href="#split_by_print-323"><span class="linenos">323</span></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-</span><span id="split_by_print-324"><a href="#split_by_print-324"><span class="linenos">324</span></a>                <span class="sa">f</span><span class="s2">"need at least 3 prints with label </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> to fill every split, got </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2">"</span>
-</span><span id="split_by_print-325"><a href="#split_by_print-325"><span class="linenos">325</span></a>            <span class="p">)</span>
-</span><span id="split_by_print-326"><a href="#split_by_print-326"><span class="linenos">326</span></a>        <span class="n">ids</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">permutation</span><span class="p">(</span><span class="n">ids</span><span class="p">)</span>
-</span><span id="split_by_print-327"><a href="#split_by_print-327"><span class="linenos">327</span></a>        <span class="c1"># Round half up; Python's round() rounds half to even (round(4.5) == 4).</span>
-</span><span id="split_by_print-328"><a href="#split_by_print-328"><span class="linenos">328</span></a>        <span class="n">n_test</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">n</span> <span class="o">*</span> <span class="n">test_frac</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)))</span>
-</span><span id="split_by_print-329"><a href="#split_by_print-329"><span class="linenos">329</span></a>        <span class="n">n_val</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">n</span> <span class="o">*</span> <span class="n">val_frac</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)))</span>
-</span><span id="split_by_print-330"><a href="#split_by_print-330"><span class="linenos">330</span></a>        <span class="k">if</span> <span class="n">n</span> <span class="o">-</span> <span class="n">n_test</span> <span class="o">-</span> <span class="n">n_val</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
-</span><span id="split_by_print-331"><a href="#split_by_print-331"><span class="linenos">331</span></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"no label-</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> prints left for training; lower the fractions"</span><span class="p">)</span>
-</span><span id="split_by_print-332"><a href="#split_by_print-332"><span class="linenos">332</span></a>        <span class="n">split_ids</span><span class="p">[</span><span class="s2">"test"</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">ids</span><span class="p">[:</span><span class="n">n_test</span><span class="p">])</span>
-</span><span id="split_by_print-333"><a href="#split_by_print-333"><span class="linenos">333</span></a>        <span class="n">split_ids</span><span class="p">[</span><span class="s2">"val"</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">ids</span><span class="p">[</span><span class="n">n_test</span> <span class="p">:</span> <span class="n">n_test</span> <span class="o">+</span> <span class="n">n_val</span><span class="p">])</span>
-</span><span id="split_by_print-334"><a href="#split_by_print-334"><span class="linenos">334</span></a>        <span class="n">split_ids</span><span class="p">[</span><span class="s2">"train"</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">ids</span><span class="p">[</span><span class="n">n_test</span> <span class="o">+</span> <span class="n">n_val</span> <span class="p">:])</span>
-</span><span id="split_by_print-335"><a href="#split_by_print-335"><span class="linenos">335</span></a>
-</span><span id="split_by_print-336"><a href="#split_by_print-336"><span class="linenos">336</span></a>    <span class="n">split</span> <span class="o">=</span> <span class="n">DataSplit</span><span class="p">(</span>
-</span><span id="split_by_print-337"><a href="#split_by_print-337"><span class="linenos">337</span></a>        <span class="o">*</span><span class="p">(</span>
-</span><span id="split_by_print-338"><a href="#split_by_print-338"><span class="linenos">338</span></a>            <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s2">"print_id"</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">split_ids</span><span class="p">[</span><span class="n">name</span><span class="p">])]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="split_by_print-339"><a href="#split_by_print-339"><span class="linenos">339</span></a>            <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">DataSplit</span><span class="o">.</span><span class="n">_fields</span>
-</span><span id="split_by_print-340"><a href="#split_by_print-340"><span class="linenos">340</span></a>        <span class="p">)</span>
-</span><span id="split_by_print-341"><a href="#split_by_print-341"><span class="linenos">341</span></a>    <span class="p">)</span>
-</span><span id="split_by_print-342"><a href="#split_by_print-342"><span class="linenos">342</span></a>    <span class="n">check_no_print_leakage</span><span class="p">(</span><span class="n">split</span><span class="p">)</span>
-</span><span id="split_by_print-343"><a href="#split_by_print-343"><span class="linenos">343</span></a>    <span class="k">return</span> <span class="n">split</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="split_by_print-327"><a href="#split_by_print-327"><span class="linenos">327</span></a><span class="k">def</span><span class="w"> </span><span class="nf">split_by_print</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">val_frac</span><span class="o">=</span><span class="mf">0.15</span><span class="p">,</span> <span class="n">test_frac</span><span class="o">=</span><span class="mf">0.15</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">DEFAULT_SEED</span><span class="p">):</span>
+</span><span id="split_by_print-328"><a href="#split_by_print-328"><span class="linenos">328</span></a><span class="w">    </span><span class="sd">"""Split metadata into train/val/test by print, stratified by label.</span>
+</span><span id="split_by_print-329"><a href="#split_by_print-329"><span class="linenos">329</span></a>
+</span><span id="split_by_print-330"><a href="#split_by_print-330"><span class="linenos">330</span></a><span class="sd">    Whole prints are assigned to one split, so near-duplicate frames of the</span>
+</span><span id="split_by_print-331"><a href="#split_by_print-331"><span class="linenos">331</span></a><span class="sd">    same print can never appear on both sides of an evaluation. Good and</span>
+</span><span id="split_by_print-332"><a href="#split_by_print-332"><span class="linenos">332</span></a><span class="sd">    defective prints are shuffled and divided separately, so each split gets</span>
+</span><span id="split_by_print-333"><a href="#split_by_print-333"><span class="linenos">333</span></a><span class="sd">    about the same fraction of each class and at least one print of each.</span>
+</span><span id="split_by_print-334"><a href="#split_by_print-334"><span class="linenos">334</span></a>
+</span><span id="split_by_print-335"><a href="#split_by_print-335"><span class="linenos">335</span></a><span class="sd">    Parameters</span>
+</span><span id="split_by_print-336"><a href="#split_by_print-336"><span class="linenos">336</span></a><span class="sd">    ----------</span>
+</span><span id="split_by_print-337"><a href="#split_by_print-337"><span class="linenos">337</span></a><span class="sd">    df : pandas.DataFrame</span>
+</span><span id="split_by_print-338"><a href="#split_by_print-338"><span class="linenos">338</span></a><span class="sd">        Validated metadata (see :func:`validate_metadata`).</span>
+</span><span id="split_by_print-339"><a href="#split_by_print-339"><span class="linenos">339</span></a><span class="sd">    val_frac, test_frac : float, default 0.15</span>
+</span><span id="split_by_print-340"><a href="#split_by_print-340"><span class="linenos">340</span></a><span class="sd">        Fraction of the prints of each class sent to validation and test.</span>
+</span><span id="split_by_print-341"><a href="#split_by_print-341"><span class="linenos">341</span></a><span class="sd">        Each must be in (0, 1) and together less than 1. Counts are rounded</span>
+</span><span id="split_by_print-342"><a href="#split_by_print-342"><span class="linenos">342</span></a><span class="sd">        to the nearest whole print (halves round up), with a minimum of one.</span>
+</span><span id="split_by_print-343"><a href="#split_by_print-343"><span class="linenos">343</span></a><span class="sd">    seed : int, default ``config.DEFAULT_SEED``</span>
+</span><span id="split_by_print-344"><a href="#split_by_print-344"><span class="linenos">344</span></a><span class="sd">        Seed for the shuffle; the same seed always gives the same split.</span>
+</span><span id="split_by_print-345"><a href="#split_by_print-345"><span class="linenos">345</span></a>
+</span><span id="split_by_print-346"><a href="#split_by_print-346"><span class="linenos">346</span></a><span class="sd">    Returns</span>
+</span><span id="split_by_print-347"><a href="#split_by_print-347"><span class="linenos">347</span></a><span class="sd">    -------</span>
+</span><span id="split_by_print-348"><a href="#split_by_print-348"><span class="linenos">348</span></a><span class="sd">    DataSplit</span>
+</span><span id="split_by_print-349"><a href="#split_by_print-349"><span class="linenos">349</span></a><span class="sd">        ``(train, val, test)`` DataFrames with reset indexes.</span>
+</span><span id="split_by_print-350"><a href="#split_by_print-350"><span class="linenos">350</span></a>
+</span><span id="split_by_print-351"><a href="#split_by_print-351"><span class="linenos">351</span></a><span class="sd">    Raises</span>
+</span><span id="split_by_print-352"><a href="#split_by_print-352"><span class="linenos">352</span></a><span class="sd">    ------</span>
+</span><span id="split_by_print-353"><a href="#split_by_print-353"><span class="linenos">353</span></a><span class="sd">    ValueError</span>
+</span><span id="split_by_print-354"><a href="#split_by_print-354"><span class="linenos">354</span></a><span class="sd">        If the fractions are out of range, or a class has fewer than three</span>
+</span><span id="split_by_print-355"><a href="#split_by_print-355"><span class="linenos">355</span></a><span class="sd">        prints (one is needed per split).</span>
+</span><span id="split_by_print-356"><a href="#split_by_print-356"><span class="linenos">356</span></a><span class="sd">    """</span>
+</span><span id="split_by_print-357"><a href="#split_by_print-357"><span class="linenos">357</span></a>    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">frac</span> <span class="ow">in</span> <span class="p">((</span><span class="s2">"val_frac"</span><span class="p">,</span> <span class="n">val_frac</span><span class="p">),</span> <span class="p">(</span><span class="s2">"test_frac"</span><span class="p">,</span> <span class="n">test_frac</span><span class="p">)):</span>
+</span><span id="split_by_print-358"><a href="#split_by_print-358"><span class="linenos">358</span></a>        <span class="k">if</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">frac</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+</span><span id="split_by_print-359"><a href="#split_by_print-359"><span class="linenos">359</span></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> must be in (0, 1), got </span><span class="si">{</span><span class="n">frac</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="split_by_print-360"><a href="#split_by_print-360"><span class="linenos">360</span></a>    <span class="k">if</span> <span class="n">val_frac</span> <span class="o">+</span> <span class="n">test_frac</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
+</span><span id="split_by_print-361"><a href="#split_by_print-361"><span class="linenos">361</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"val_frac + test_frac must be less than 1"</span><span class="p">)</span>
+</span><span id="split_by_print-362"><a href="#split_by_print-362"><span class="linenos">362</span></a>
+</span><span id="split_by_print-363"><a href="#split_by_print-363"><span class="linenos">363</span></a>    <span class="n">prints</span> <span class="o">=</span> <span class="n">print_table</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+</span><span id="split_by_print-364"><a href="#split_by_print-364"><span class="linenos">364</span></a>    <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+</span><span id="split_by_print-365"><a href="#split_by_print-365"><span class="linenos">365</span></a>    <span class="n">split_ids</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"train"</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">"val"</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">"test"</span><span class="p">:</span> <span class="p">[]}</span>
+</span><span id="split_by_print-366"><a href="#split_by_print-366"><span class="linenos">366</span></a>    <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
+</span><span id="split_by_print-367"><a href="#split_by_print-367"><span class="linenos">367</span></a>        <span class="n">ids</span> <span class="o">=</span> <span class="n">prints</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">prints</span><span class="p">[</span><span class="n">LABEL_COLUMN</span><span class="p">]</span> <span class="o">==</span> <span class="n">label</span><span class="p">,</span> <span class="s2">"print_id"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+</span><span id="split_by_print-368"><a href="#split_by_print-368"><span class="linenos">368</span></a>        <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ids</span><span class="p">)</span>
+</span><span id="split_by_print-369"><a href="#split_by_print-369"><span class="linenos">369</span></a>        <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
+</span><span id="split_by_print-370"><a href="#split_by_print-370"><span class="linenos">370</span></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+</span><span id="split_by_print-371"><a href="#split_by_print-371"><span class="linenos">371</span></a>                <span class="sa">f</span><span class="s2">"need at least 3 prints with label </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> to fill every split, got </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2">"</span>
+</span><span id="split_by_print-372"><a href="#split_by_print-372"><span class="linenos">372</span></a>            <span class="p">)</span>
+</span><span id="split_by_print-373"><a href="#split_by_print-373"><span class="linenos">373</span></a>        <span class="n">ids</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">permutation</span><span class="p">(</span><span class="n">ids</span><span class="p">)</span>
+</span><span id="split_by_print-374"><a href="#split_by_print-374"><span class="linenos">374</span></a>        <span class="c1"># Round half up; Python's round() rounds half to even (round(4.5) == 4).</span>
+</span><span id="split_by_print-375"><a href="#split_by_print-375"><span class="linenos">375</span></a>        <span class="n">n_test</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">n</span> <span class="o">*</span> <span class="n">test_frac</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)))</span>
+</span><span id="split_by_print-376"><a href="#split_by_print-376"><span class="linenos">376</span></a>        <span class="n">n_val</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">n</span> <span class="o">*</span> <span class="n">val_frac</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)))</span>
+</span><span id="split_by_print-377"><a href="#split_by_print-377"><span class="linenos">377</span></a>        <span class="k">if</span> <span class="n">n</span> <span class="o">-</span> <span class="n">n_test</span> <span class="o">-</span> <span class="n">n_val</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+</span><span id="split_by_print-378"><a href="#split_by_print-378"><span class="linenos">378</span></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"no label-</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> prints left for training; lower the fractions"</span><span class="p">)</span>
+</span><span id="split_by_print-379"><a href="#split_by_print-379"><span class="linenos">379</span></a>        <span class="n">split_ids</span><span class="p">[</span><span class="s2">"test"</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">ids</span><span class="p">[:</span><span class="n">n_test</span><span class="p">])</span>
+</span><span id="split_by_print-380"><a href="#split_by_print-380"><span class="linenos">380</span></a>        <span class="n">split_ids</span><span class="p">[</span><span class="s2">"val"</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">ids</span><span class="p">[</span><span class="n">n_test</span> <span class="p">:</span> <span class="n">n_test</span> <span class="o">+</span> <span class="n">n_val</span><span class="p">])</span>
+</span><span id="split_by_print-381"><a href="#split_by_print-381"><span class="linenos">381</span></a>        <span class="n">split_ids</span><span class="p">[</span><span class="s2">"train"</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">ids</span><span class="p">[</span><span class="n">n_test</span> <span class="o">+</span> <span class="n">n_val</span> <span class="p">:])</span>
+</span><span id="split_by_print-382"><a href="#split_by_print-382"><span class="linenos">382</span></a>
+</span><span id="split_by_print-383"><a href="#split_by_print-383"><span class="linenos">383</span></a>    <span class="n">split</span> <span class="o">=</span> <span class="n">DataSplit</span><span class="p">(</span>
+</span><span id="split_by_print-384"><a href="#split_by_print-384"><span class="linenos">384</span></a>        <span class="o">*</span><span class="p">(</span>
+</span><span id="split_by_print-385"><a href="#split_by_print-385"><span class="linenos">385</span></a>            <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s2">"print_id"</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">split_ids</span><span class="p">[</span><span class="n">name</span><span class="p">])]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="split_by_print-386"><a href="#split_by_print-386"><span class="linenos">386</span></a>            <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">DataSplit</span><span class="o">.</span><span class="n">_fields</span>
+</span><span id="split_by_print-387"><a href="#split_by_print-387"><span class="linenos">387</span></a>        <span class="p">)</span>
+</span><span id="split_by_print-388"><a href="#split_by_print-388"><span class="linenos">388</span></a>    <span class="p">)</span>
+</span><span id="split_by_print-389"><a href="#split_by_print-389"><span class="linenos">389</span></a>    <span class="n">check_no_print_leakage</span><span class="p">(</span><span class="n">split</span><span class="p">)</span>
+</span><span id="split_by_print-390"><a href="#split_by_print-390"><span class="linenos">390</span></a>    <span class="k">return</span> <span class="n">split</span>
 </span></pre></div>
 
 
@@ -1163,25 +1308,25 @@ prints (one is needed per split).</li>
 
     </div>
     <a class="headerlink" href="#check_no_print_leakage"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="check_no_print_leakage-346"><a href="#check_no_print_leakage-346"><span class="linenos">346</span></a><span class="k">def</span><span class="w"> </span><span class="nf">check_no_print_leakage</span><span class="p">(</span><span class="n">split</span><span class="p">):</span>
-</span><span id="check_no_print_leakage-347"><a href="#check_no_print_leakage-347"><span class="linenos">347</span></a><span class="w">    </span><span class="sd">"""Check that no print appears in more than one split.</span>
-</span><span id="check_no_print_leakage-348"><a href="#check_no_print_leakage-348"><span class="linenos">348</span></a>
-</span><span id="check_no_print_leakage-349"><a href="#check_no_print_leakage-349"><span class="linenos">349</span></a><span class="sd">    Parameters</span>
-</span><span id="check_no_print_leakage-350"><a href="#check_no_print_leakage-350"><span class="linenos">350</span></a><span class="sd">    ----------</span>
-</span><span id="check_no_print_leakage-351"><a href="#check_no_print_leakage-351"><span class="linenos">351</span></a><span class="sd">    split : DataSplit or sequence of pandas.DataFrame</span>
-</span><span id="check_no_print_leakage-352"><a href="#check_no_print_leakage-352"><span class="linenos">352</span></a><span class="sd">        DataFrames with a ``print_id`` column.</span>
-</span><span id="check_no_print_leakage-353"><a href="#check_no_print_leakage-353"><span class="linenos">353</span></a>
-</span><span id="check_no_print_leakage-354"><a href="#check_no_print_leakage-354"><span class="linenos">354</span></a><span class="sd">    Raises</span>
-</span><span id="check_no_print_leakage-355"><a href="#check_no_print_leakage-355"><span class="linenos">355</span></a><span class="sd">    ------</span>
-</span><span id="check_no_print_leakage-356"><a href="#check_no_print_leakage-356"><span class="linenos">356</span></a><span class="sd">    ValueError</span>
-</span><span id="check_no_print_leakage-357"><a href="#check_no_print_leakage-357"><span class="linenos">357</span></a><span class="sd">        If any ``print_id`` is shared between two of the DataFrames.</span>
-</span><span id="check_no_print_leakage-358"><a href="#check_no_print_leakage-358"><span class="linenos">358</span></a><span class="sd">    """</span>
-</span><span id="check_no_print_leakage-359"><a href="#check_no_print_leakage-359"><span class="linenos">359</span></a>    <span class="n">seen</span> <span class="o">=</span> <span class="p">{}</span>
-</span><span id="check_no_print_leakage-360"><a href="#check_no_print_leakage-360"><span class="linenos">360</span></a>    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">part</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">split</span><span class="p">):</span>
-</span><span id="check_no_print_leakage-361"><a href="#check_no_print_leakage-361"><span class="linenos">361</span></a>        <span class="k">for</span> <span class="n">pid</span> <span class="ow">in</span> <span class="n">part</span><span class="p">[</span><span class="s2">"print_id"</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">():</span>
-</span><span id="check_no_print_leakage-362"><a href="#check_no_print_leakage-362"><span class="linenos">362</span></a>            <span class="k">if</span> <span class="n">pid</span> <span class="ow">in</span> <span class="n">seen</span><span class="p">:</span>
-</span><span id="check_no_print_leakage-363"><a href="#check_no_print_leakage-363"><span class="linenos">363</span></a>                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"print </span><span class="si">{</span><span class="n">pid</span><span class="si">}</span><span class="s2"> is in splits </span><span class="si">{</span><span class="n">seen</span><span class="p">[</span><span class="n">pid</span><span class="p">]</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="check_no_print_leakage-364"><a href="#check_no_print_leakage-364"><span class="linenos">364</span></a>            <span class="n">seen</span><span class="p">[</span><span class="n">pid</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="check_no_print_leakage-393"><a href="#check_no_print_leakage-393"><span class="linenos">393</span></a><span class="k">def</span><span class="w"> </span><span class="nf">check_no_print_leakage</span><span class="p">(</span><span class="n">split</span><span class="p">):</span>
+</span><span id="check_no_print_leakage-394"><a href="#check_no_print_leakage-394"><span class="linenos">394</span></a><span class="w">    </span><span class="sd">"""Check that no print appears in more than one split.</span>
+</span><span id="check_no_print_leakage-395"><a href="#check_no_print_leakage-395"><span class="linenos">395</span></a>
+</span><span id="check_no_print_leakage-396"><a href="#check_no_print_leakage-396"><span class="linenos">396</span></a><span class="sd">    Parameters</span>
+</span><span id="check_no_print_leakage-397"><a href="#check_no_print_leakage-397"><span class="linenos">397</span></a><span class="sd">    ----------</span>
+</span><span id="check_no_print_leakage-398"><a href="#check_no_print_leakage-398"><span class="linenos">398</span></a><span class="sd">    split : DataSplit or sequence of pandas.DataFrame</span>
+</span><span id="check_no_print_leakage-399"><a href="#check_no_print_leakage-399"><span class="linenos">399</span></a><span class="sd">        DataFrames with a ``print_id`` column.</span>
+</span><span id="check_no_print_leakage-400"><a href="#check_no_print_leakage-400"><span class="linenos">400</span></a>
+</span><span id="check_no_print_leakage-401"><a href="#check_no_print_leakage-401"><span class="linenos">401</span></a><span class="sd">    Raises</span>
+</span><span id="check_no_print_leakage-402"><a href="#check_no_print_leakage-402"><span class="linenos">402</span></a><span class="sd">    ------</span>
+</span><span id="check_no_print_leakage-403"><a href="#check_no_print_leakage-403"><span class="linenos">403</span></a><span class="sd">    ValueError</span>
+</span><span id="check_no_print_leakage-404"><a href="#check_no_print_leakage-404"><span class="linenos">404</span></a><span class="sd">        If any ``print_id`` is shared between two of the DataFrames.</span>
+</span><span id="check_no_print_leakage-405"><a href="#check_no_print_leakage-405"><span class="linenos">405</span></a><span class="sd">    """</span>
+</span><span id="check_no_print_leakage-406"><a href="#check_no_print_leakage-406"><span class="linenos">406</span></a>    <span class="n">seen</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="check_no_print_leakage-407"><a href="#check_no_print_leakage-407"><span class="linenos">407</span></a>    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">part</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">split</span><span class="p">):</span>
+</span><span id="check_no_print_leakage-408"><a href="#check_no_print_leakage-408"><span class="linenos">408</span></a>        <span class="k">for</span> <span class="n">pid</span> <span class="ow">in</span> <span class="n">part</span><span class="p">[</span><span class="s2">"print_id"</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">():</span>
+</span><span id="check_no_print_leakage-409"><a href="#check_no_print_leakage-409"><span class="linenos">409</span></a>            <span class="k">if</span> <span class="n">pid</span> <span class="ow">in</span> <span class="n">seen</span><span class="p">:</span>
+</span><span id="check_no_print_leakage-410"><a href="#check_no_print_leakage-410"><span class="linenos">410</span></a>                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"print </span><span class="si">{</span><span class="n">pid</span><span class="si">}</span><span class="s2"> is in splits </span><span class="si">{</span><span class="n">seen</span><span class="p">[</span><span class="n">pid</span><span class="p">]</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="check_no_print_leakage-411"><a href="#check_no_print_leakage-411"><span class="linenos">411</span></a>            <span class="n">seen</span><span class="p">[</span><span class="n">pid</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
 </span></pre></div>
 
 
