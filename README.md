@@ -69,6 +69,33 @@ python scripts/train_cnn.py           # writes results/cnn_*.csv and models/cnn_
 
 The first run downloads the ImageNet weights (~10 MB) to the torch cache.
 
+## Experiments
+
+One command runs every experiment on the real data (~12 minutes on a laptop
+CPU) and writes CSVs, figures and the comparison table to `results/`:
+
+```bash
+python scripts/run_pipeline.py                     # all stages
+python scripts/run_pipeline.py --stages sweep report   # or a subset
+python scripts/make_report.py                      # rebuild table + figures only
+```
+
+| Stage | What it does | Output |
+|---|---|---|
+| splits | print-level train/val/test split (36/8/8 prints) | `splits.csv` |
+| features | 43 hand-crafted features per image at 32/64/128/224 px | `data/features/` (cache) |
+| baseline | logistic regression + random forest, 128 px | `predictions.csv` |
+| cnn | MobileNetV3-Small, head only, max 10 epochs, 128 px | `cnn_history.csv` |
+| cv | 5-fold StratifiedGroupKFold over prints (baselines) | `cv_folds.csv` |
+| lopo | leave-one-printer-out (baselines) | `lopo.csv` |
+| sweep | resolution 32/64/128/224 px, validation split | `resolution_sweep.csv` |
+| robustness | blur, brightness, noise, JPEG on test images | `robustness.csv` |
+| profiling | timing, cProfile, FLOPs, arithmetic intensity | `profiling.csv`, `cnn_layer_flops.csv`, `cprofile_features.txt` |
+| report | bootstrap CIs over prints, comparison table, figures | `test_metrics.csv`, `comparison.md`, `figures/` |
+
+Settings are chosen on the validation split; the test split is scored once per
+final model. See [results/comparison.md](results/comparison.md).
+
 ## Tests
 
 ```bash

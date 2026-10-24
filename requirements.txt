@@ -14,6 +14,7 @@ torchvision==0.29.1
 pytest==9.1.1
 pytest-html==4.2.0
 pdoc==16.0.0
+matplotlib==3.11.2
 
 # This package, in editable mode
 -e .
