@@ -417,3 +417,37 @@ def predict_proba(model, df, size=config.DEFAULT_IMAGE_SIZE, batch_size=64, devi
     loader = DataLoader(FrameDataset(df, size), batch_size=batch_size)
     probs = [torch.sigmoid(model(x.to(device)).squeeze(1)).cpu() for x, _ in loader]
     return torch.cat(probs).numpy()
+
+
+@torch.no_grad()
+def predict_proba_images(model, images, batch_size=64, device=None):
+    """Probability of under-extrusion for images already in memory.
+
+    Used for robustness tests, where images are corrupted before prediction.
+
+    Parameters
+    ----------
+    model : torch.nn.Module
+        Trained model.
+    images : numpy.ndarray
+        Float array of shape ``(N, H, W, 3)`` with values in [0, 1].
+    batch_size : int, default 64
+    device : str, optional
+        Torch device; defaults to :func:`default_device`.
+
+    Returns
+    -------
+    numpy.ndarray
+        Probabilities in [0, 1], shape ``(N,)``.
+    """
+    images = np.asarray(images)
+    if images.ndim != 4 or images.shape[-1] != 3 or len(images) == 0:
+        raise ValueError(f"expected a non-empty (N, H, W, 3) array, got shape {images.shape}")
+    device = device or default_device()
+    model.to(device).eval()
+    probs = []
+    for start in range(0, len(images), batch_size):
+        x = torch.from_numpy(np.ascontiguousarray(images[start : start + batch_size], dtype=np.float32))
+        x = normalise(x.permute(0, 3, 1, 2))
+        probs.append(torch.sigmoid(model(x.to(device)).squeeze(1)).cpu())
+    return torch.cat(probs).numpy()

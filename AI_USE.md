@@ -164,3 +164,52 @@ states; the module docstring explains why pretrained weights are required.
 - `pytest`: 146 passed.
 
 **AI errors found.** None found by the tests in this step.
+
+---
+
+## 2026-10-25: Evaluation, robustness, profiling and the full pipeline
+
+**Task.** Run the full pipeline on the real data (splits, baseline, CNN head-only
+10 epochs at 128 px, grouped CV and leave-one-printer-out for the baseline,
+resolution sweep, robustness, profiling), save results and figures, and build
+a comparison table.
+
+**What the AI did**
+- `src/fdm_defect/evaluate.py`: `binary_metrics`, `bootstrap_ci` (percentile
+  bootstrap resampling whole prints, skipping one-class resamples),
+  `group_level` (mean probability per print), `grouped_cv`
+  (StratifiedGroupKFold), `leave_one_group_out`.
+- `src/fdm_defect/robustness.py`: separable Gaussian blur, brightness,
+  Gaussian noise, JPEG round-trip.
+- `src/fdm_defect/profiling.py`: forward-hook FLOP counter for Conv2d/Linear
+  (1 MAC = 2 FLOPs), arithmetic intensity, `perf_counter` timing, cProfile,
+  model size. `cnn.predict_proba_images` for in-memory (corrupted) images.
+- `scripts/run_pipeline.py` (stages) and `scripts/make_report.py` (bootstrap
+  CIs, comparison table, 5 figures). 48 new tests (194 total).
+
+**What was kept / changed.** All kept. Protocol decisions to be able to defend:
+CV and LOPO use all 52 prints and are only reported, never used to choose
+settings; the CNN uses early stopping (patience 5) within the 10-epoch cap, so
+it stopped after 6 epochs with epoch 1 best; baseline inference time includes
+feature extraction; JPEG decoding is excluded for all models.
+
+**How it was checked**
+- Known-answer tests: metrics vs a hand-counted confusion matrix and ROC-AUC
+  (6/9 correctly ranked pairs); FLOP counter vs hand counts for a standard
+  conv (21,600 MACs), depthwise conv (7,200) and linear layer (4,000); linear
+  arithmetic intensity 8,000 / 19,220 FLOP/byte; separable blur equals the
+  dense 2-D convolution; noise std; bootstrap skip rate with 2 groups (~1/2).
+- Independent check: the counter gives MobileNetV3-Small at 224 px within the
+  published ~0.06 GMACs.
+- The CNN retrained at 128 px in the sweep reproduced the main run's
+  validation AUC (0.899) exactly, confirming determinism.
+- Every figure was rendered and inspected; label collisions were fixed.
+
+**AI errors found.**
+- The first leave-one-group-out test used `printer = group % 4` with
+  `label = group % 2`, giving printers with only one class (recall NaN). The
+  test data was wrong, not the code; fixed by assigning printers in blocks.
+- The first pipeline run crashed: pandas 3 strings became an object array in
+  the feature cache, which NumPy will not load without pickle. The crash was
+  hidden because the shell pipe reported grep's exit code; fixed the dtype and
+  reran with `pipefail`.

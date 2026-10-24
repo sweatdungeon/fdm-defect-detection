@@ -25,6 +25,7 @@ dev = [
     "pytest>=8.0",
     "pytest-html>=4.0",
     "pdoc>=14.0",
+    "matplotlib>=3.8",
 ]
 
 [tool.setuptools.packages.find]

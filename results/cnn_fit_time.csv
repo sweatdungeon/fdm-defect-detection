@@ -1,0 +1,2 @@
+model,fit_seconds,best_epoch,epochs_run
+cnn,51.773874700003944,1,6

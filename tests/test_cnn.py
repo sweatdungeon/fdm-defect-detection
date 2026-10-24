@@ -20,11 +20,12 @@ from fdm_defect.cnn import (
     compute_pos_weight,
     normalise,
     predict_proba,
+    predict_proba_images,
     seed_everything,
     set_train_mode,
     train_model,
 )
-from fdm_defect.data import load_metadata, split_by_print
+from fdm_defect.data import load_images, load_metadata, split_by_print
 
 SIZE = 32
 
@@ -238,6 +239,20 @@ def test_predict_proba(split):
     proba = predict_proba(model, split.test, size=SIZE, device="cpu")
     assert proba.shape == (len(split.test),)
     assert ((proba >= 0) & (proba <= 1)).all()
+
+
+def test_predict_proba_images_matches_dataset_path(split):
+    # In-memory prediction must give the same answer as loading from disk.
+    model = build_model(pretrained=False)
+    images = load_images(split.test["path"], size=SIZE)
+    from_disk = predict_proba(model, split.test, size=SIZE, device="cpu")
+    in_memory = predict_proba_images(model, images, device="cpu")
+    np.testing.assert_allclose(in_memory, from_disk, rtol=1e-5, atol=1e-6)
+
+
+def test_predict_proba_images_invalid():
+    with pytest.raises(ValueError):
+        predict_proba_images(build_model(pretrained=False), np.zeros((4, 4, 3)))
 
 
 # --------------------------------------------------------------------------
