@@ -128,3 +128,39 @@ correlation is defined as 1 for a constant image.
 probabilities for exact equality and failed by 2e-16: with `n_jobs=-1`,
 per-tree probabilities are summed in thread order, so the last bit can vary.
 The fitted trees are identical; the test now uses a 1e-12 relative tolerance.
+
+---
+
+## 2026-10-25: Pretrained CNN training module
+
+**Task.** Write the MobileNetV3-Small training module from CLAUDE.md, with tests.
+
+**What the AI did**
+- `src/fdm_defect/cnn.py`: `build_model` (MobileNetV3-Small or ResNet-18,
+  ImageNet weights, last layer replaced by a 1-logit `Linear`, backbone frozen
+  by default); `set_train_mode` (keeps BatchNorm layers whose parameters are
+  all frozen in eval mode); `FrameDataset` (uint8 in-memory cache, ImageNet
+  normalisation, flip + brightness augmentation); `train_model`
+  (`BCEWithLogitsLoss` with `pos_weight = n_good / n_defective`, AdamW, early
+  stopping on validation loss restoring the best weights); `predict_proba`.
+- `scripts/train_cnn.py`; torch 2.14.1 / torchvision 0.29.1 added;
+  `models/` and `*.pt` git-ignored.
+- `tests/test_cnn.py`: 33 tests.
+
+**What was kept / changed.** All kept. Checked in torchvision 0.29.1 that
+MobileNetV3-Small's 34 BatchNorm layers use momentum 0.01, as CLAUDE.md
+states; the module docstring explains why pretrained weights are required.
+
+**How it was checked**
+- A test confirms frozen BatchNorm running statistics are unchanged after a
+  forward pass in training mode (the bug `set_train_mode` prevents), and
+  another that one training epoch changes the head but not the backbone.
+- Early stopping tested with lr = 0 (constant validation loss, so it must stop
+  after 1 + patience epochs); best-weight restoration tested by recomputing
+  the validation loss after training.
+- Exact determinism: two runs with the same seed give identical weights.
+- With the cached ImageNet weights, head-only training reaches >= 80%
+  accuracy on held-out synthetic prints.
+- `pytest`: 146 passed.
+
+**AI errors found.** None found by the tests in this step.
