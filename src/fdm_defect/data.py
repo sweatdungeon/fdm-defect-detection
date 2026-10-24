@@ -182,6 +182,53 @@ def validate_metadata(df, image_dir=None, check_files=True):
     return df
 
 
+def make_subset(df, frames_per_print=120):
+    """Select up to ``frames_per_print`` evenly spaced frames from every print.
+
+    This is how ``data/train_subset.csv`` was made from the competition's
+    ``train.csv``. Rows are sorted by ``img_path`` (which orders each print's
+    frames by timestamp) and grouped by ``print_id``. For a print with ``n``
+    frames, the row positions ``np.linspace(0, n - 1, min(frames_per_print, n))``
+    are rounded to integers and deduplicated. Note that ``np.round`` rounds
+    halves to even (4.5 -> 4), which the committed subset relies on. Prints are
+    concatenated in ``print_id`` order.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Metadata with at least ``img_path`` and ``print_id`` columns,
+        e.g. the full ``train.csv``.
+    frames_per_print : int, default 120
+        Maximum frames kept per print; prints with fewer keep all of them.
+
+    Returns
+    -------
+    pandas.DataFrame
+        The selected rows, same columns as ``df``, with a fresh index.
+
+    Raises
+    ------
+    ValueError
+        If a required column is missing, ``df`` is empty, or
+        ``frames_per_print`` is not a positive integer.
+    """
+    missing = [c for c in ("img_path", "print_id") if c not in df.columns]
+    if missing:
+        raise ValueError(f"df is missing columns: {missing}")
+    if df.empty:
+        raise ValueError("df has no rows")
+    if isinstance(frames_per_print, bool) or not isinstance(frames_per_print, (int, np.integer)) or frames_per_print < 1:
+        raise ValueError(f"frames_per_print must be a positive integer, got {frames_per_print!r}")
+
+    df = df.sort_values("img_path", kind="stable", ignore_index=True)
+    parts = []
+    for _, frames in df.groupby("print_id", sort=True):
+        n = len(frames)
+        positions = np.unique(np.linspace(0, n - 1, min(frames_per_print, n)).round().astype(int))
+        parts.append(frames.iloc[positions])
+    return pd.concat(parts, ignore_index=True)
+
+
 def load_image(path, size=config.DEFAULT_IMAGE_SIZE):
     """Load one image as a square RGB array scaled to [0, 1].
 

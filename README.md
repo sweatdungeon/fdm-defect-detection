@@ -26,6 +26,13 @@ The goal is an **early-warning monitor**: a model that looks at each frame from
 a camera mounted beside the nozzle and estimates the probability that the
 printer is under-extruding, so a failing print can be paused.
 
+Camera-based monitoring of extrusion printers has been shown to work at scale:
+Brion and Pattinson [10] trained multi-head neural networks to detect and
+correct a range of printing errors in real time across different printers.
+This project studies a narrower problem, under-extrusion only, on a small
+public dataset [13], with an emphasis on honest validation and computational
+cost.
+
 Formally this is **binary image classification** per frame. Requirements that
 follow from the use case:
 
@@ -82,6 +89,7 @@ covered by tests.
 | `size` not an integer (including `bool`) / not positive | `load_image` | `TypeError` / `ValueError` |
 | Image array not float (e.g. `uint8`), wrong shape, < 3 × 3, NaN/inf, outside [0, 1] | `extract_features`, `corrupt` | `TypeError` / `ValueError` |
 | Split fractions out of range; < 3 prints of a class; no training prints left | `split_by_print` | `ValueError` |
+| `frames_per_print` not a positive integer; missing `img_path` / `print_id` | `make_subset` | `ValueError` |
 | A print in two splits | `check_no_print_leakage` | `ValueError` |
 | Training labels with one class; feature matrix with NaN or wrong shape | `fit_baseline`, `train_model` | `ValueError` |
 | Hyperparameters out of range (epochs, batch size, lr, patience) | `train_model` | `ValueError` |
@@ -114,23 +122,24 @@ generator. The one real-data test is skipped if `data/raw/images/` is absent.
 ## 4. Workflow
 
 ```
-data/train_subset.csv ─┐
-Kaggle images.zip ─────┴─► scripts/extract_subset.py ─► data/raw/images/
-                                                            │
-                         scripts/run_pipeline.py ◄──────────┘
+Kaggle train.csv ──► scripts/make_subset.py ──► data/train_subset.csv ─┐
+Kaggle images.zip ──────────────────────────────────────────────────────┴─► scripts/extract_subset.py ─► data/raw/images/
+                                                                                                        │
+                         scripts/run_pipeline.py ◄──────────────────────────────────────────────────────┘
    splits → features → baseline → cnn → cv → lopo → sweep → robustness → profiling → report
                                                             │
                                      results/*.csv, results/figures/*.png, results/comparison.md
 ```
 
 ```bash
+python scripts/make_subset.py --train train.csv --check  # verify the subset (optional)
 python scripts/run_pipeline.py                         # everything, ~12 min on a laptop CPU
 python scripts/run_pipeline.py --stages sweep report   # a subset of stages
 python scripts/make_report.py                          # rebuild table and figures from CSVs
 python scripts/run_baseline.py                         # baseline only, validation metrics
 python scripts/train_cnn.py --size 128                 # CNN only (--full-finetune, --arch resnet18)
 
-pytest                                                 # 194 tests
+pytest                                                 # 205 tests
 pytest --html=results/test_report.html --self-contained-html
 python scripts/build_docs.py                           # API documentation (pdoc) into docs/
 ```
@@ -162,8 +171,8 @@ src/fdm_defect/
   evaluate.py     metrics, print-level bootstrap CIs, grouped CV, leave-one-group-out
   robustness.py   blur, brightness, noise and JPEG corruptions
   profiling.py    timing, cProfile, FLOP counter, arithmetic intensity
-scripts/          extract_subset, run_pipeline, make_report, run_baseline, train_cnn, build_docs
-tests/            pytest suite (194 tests)
+scripts/          make_subset, extract_subset, run_pipeline, make_report, run_baseline, train_cnn, build_docs
+tests/            pytest suite (205 tests)
 results/          CSVs, figures, comparison table, test report
 docs/             pdoc HTML documentation
 data/             subset CSV and data README (images git-ignored)
@@ -173,12 +182,13 @@ data/             subset CSV and data README (images git-ignored)
 
 ### Data and split
 
-The Kaggle competition *Early detection of 3D printing issues* provides 81,060
+The Kaggle competition *Early detection of 3D printing issues* [13] provides 81,060
 labelled frames from **52 prints on 5 printers**. Every frame of a print has the
 same label, and consecutive frames (~0.41 s apart) are near-duplicates, so the
 **independent sample size is 52 prints, not 81k images**. A subset of up to 120
 evenly spaced frames per print (6,227 images, all 52 prints, 48% defective) is
-used; see [data/README.md](data/README.md).
+used; `scripts/make_subset.py` rebuilds it from `train.csv` byte-for-byte (see
+[data/README.md](data/README.md)).
 
 The split assigns **whole prints** to train / validation / test (36 / 8 / 8
 prints), shuffling good and defective prints separately so each split has both
@@ -195,19 +205,22 @@ All features are implemented in NumPy (`features.py`) on the image resized to
 |---|---|---|---|
 | Grey histogram | 16 | normalised counts over [0, 1] | brightness distribution |
 | RGB mean / std | 6 | per channel | filament and bed colour |
-| Sobel gradients | 5 | mean / std magnitude, mean \|gx\|, mean \|gy\|, edge density (magnitude > 1.0) | bead edges and their direction |
-| Uniform LBP | 10 | 8 neighbours, radius 1; labels 0–8 + non-uniform | micro-texture |
-| GLCM | 4 | contrast, homogeneity, energy, correlation; 8 levels, offsets right and down, symmetric | grey-level co-occurrence texture |
-| 2-D FFT | 2 | share of non-DC power in the peak bin, peak radial frequency | regularity of the bead stripes |
+| Sobel gradients [8] | 5 | mean / std magnitude, mean \|gx\|, mean \|gy\|, edge density (magnitude > 1.0) | bead edges and their direction |
+| Uniform LBP [3] | 10 | 8 neighbours, radius 1; labels 0–8 + non-uniform | micro-texture |
+| GLCM [4] | 4 | contrast, homogeneity, energy, correlation; 8 levels, offsets right and down, symmetric | grey-level co-occurrence texture |
+| 2-D FFT [7] | 2 | share of non-DC power in the peak bin, peak radial frequency | regularity of the bead stripes |
 
-Two classifiers use them, both with `class_weight="balanced"`: standardised
-**logistic regression** (L2), and a **random forest** (300 trees,
-`min_samples_leaf=5` to stop trees memorising individual near-duplicate frames).
+Two classifiers from scikit-learn [11] use them, both with
+`class_weight="balanced"`: standardised **logistic regression** (L2), and a
+**random forest** [5] (300 trees, `min_samples_leaf=5` to stop trees
+memorising individual near-duplicate frames).
 
 ### Main model: pretrained CNN
 
-ImageNet-pretrained **MobileNetV3-Small** (`cnn.py`), with the final 1000-way
-layer replaced by a single logit; `sigmoid(logit)` is the probability.
+ImageNet-pretrained **MobileNetV3-Small** [1] (`cnn.py`, PyTorch [12]), with
+the final 1000-way layer replaced by a single logit; `sigmoid(logit)` is the
+probability. ResNet-18 [2] is available as an alternative backbone
+(`--arch resnet18`) but was not used for the reported results.
 
 - **Head-only training** (default): the convolutional backbone is frozen and
   only the classifier head is trained (0.59 M of 1.52 M parameters).
@@ -218,7 +231,7 @@ layer replaced by a single logit; `sigmoid(logit)` is the probability.
   0.01, so from random weights the running statistics lag the activations and
   the eval-mode network collapses to constant outputs.
 - **Loss:** `BCEWithLogitsLoss` with `pos_weight = n_good / n_defective`;
-  **optimiser:** AdamW (lr 1e-3, weight decay 1e-4), batch 64.
+  **optimiser:** AdamW [9] (lr 1e-3, weight decay 1e-4), batch 64.
 - **Augmentation:** random horizontal flip, brightness × U(0.8, 1.2).
 - **Early stopping** on validation loss (patience 5, max 10 epochs), restoring
   the best weights.
@@ -231,7 +244,7 @@ layer replaced by a single logit; `sigmoid(logit)` is the probability.
 - **Metrics** (frame level, threshold 0.5): recall (primary), precision, F1,
   specificity, accuracy, ROC-AUC; plus print-level accuracy from the mean
   frame probability per print.
-- **95% confidence intervals:** percentile bootstrap (2,000 resamples) that
+- **95% confidence intervals:** percentile bootstrap [6] (2,000 resamples) that
   resamples **whole prints**, skipping resamples with only one class.
 - **Grouped 5-fold CV** (`StratifiedGroupKFold` over prints) and
   **leave-one-printer-out** for the baselines, on all 52 prints. They measure
@@ -249,12 +262,12 @@ layer replaced by a single logit; `sigmoid(logit)` is the probability.
 
 ## 6. Validation
 
-The code is checked by **194 pytest tests** (all passing; see the
+The code is checked by **205 pytest tests** (all passing; see the
 [HTML test report](results/test_report.html)):
 
 | Test file | Tests | What is verified |
 |---|---|---|
-| `test_data.py` | 42 | every metadata validation error; image loading; split has no print overlap, uses every row once, keeps whole prints, is stratified, deterministic; real-data check (6,227 images, 52 prints) |
+| `test_data.py` | 53 | every metadata validation error; image loading; split has no print overlap, uses every row once, keeps whole prints, is stratified, deterministic; subset selection at hand-computed positions (including half-to-even rounding); real-data checks (6,227 images, 52 prints; `train.csv` rebuilds the committed subset exactly) |
 | `test_features.py` | 41 | **known answers**: Sobel on a ramp g = s·x gives gx = 8s; a pure cosine puts exactly 0.5 of non-DC power in its peak FFT bin at frequency k/N; a two-level checkerboard gives GLCM contrast (L−1)², homogeneity 1/(1+(L−1)²), energy √0.5, correlation −1; hand-worked LBP patterns; step-edge density 2/6; histogram endpoints |
 | `test_synthetic.py` | 17 | generator shapes, determinism; a good image's FFT peak is at n_beads; defect images cover less area |
 | `test_baseline.py` | 13 | both models separate synthetic classes (≥ 90%); reproducibility; balanced weights; input validation |
@@ -386,23 +399,19 @@ in [AI_USE.md](AI_USE.md).
 
 ## 10. References
 
-1. Kaggle. *Early detection of 3D printing issues* (competition and dataset).
-   https://www.kaggle.com/competitions/early-detection-of-3d-printing-issues
-2. A. Howard et al. "Searching for MobileNetV3." *Proc. IEEE/CVF ICCV*, 2019, pp. 1314–1324.
-3. J. Deng et al. "ImageNet: A large-scale hierarchical image database." *Proc. IEEE CVPR*, 2009.
-4. T. Ojala, M. Pietikäinen and T. Mäenpää. "Multiresolution gray-scale and rotation
-   invariant texture classification with local binary patterns." *IEEE TPAMI* 24(7), 2002, pp. 971–987.
-5. R. M. Haralick, K. Shanmugam and I. Dinstein. "Textural features for image
-   classification." *IEEE Trans. Systems, Man, and Cybernetics* SMC-3(6), 1973, pp. 610–621.
-6. I. Sobel and G. Feldman. "A 3×3 isotropic gradient operator for image processing."
-   Presented at the Stanford Artificial Intelligence Project, 1968.
-7. L. Breiman. "Random forests." *Machine Learning* 45(1), 2001, pp. 5–32.
-8. B. Efron and R. J. Tibshirani. *An Introduction to the Bootstrap.* Chapman & Hall, 1993.
-9. F. Pedregosa et al. "Scikit-learn: Machine learning in Python." *JMLR* 12, 2011, pp. 2825–2830.
-10. A. Paszke et al. "PyTorch: An imperative style, high-performance deep learning
-    library." *NeurIPS* 32, 2019.
-11. S. Williams, A. Waterman and D. Patterson. "Roofline: An insightful visual
-    performance model for multicore architectures." *Commun. ACM* 52(4), 2009, pp. 65–76.
+1. A. Howard et al., “Searching for MobileNetV3,” Proc. IEEE/CVF ICCV, 2019, pp. 1314–1324.
+2. K. He, X. Zhang, S. Ren and J. Sun, “Deep residual learning for image recognition,” Proc. IEEE CVPR, 2016, pp. 770–778.
+3. T. Ojala, M. Pietikäinen and T. Mäenpää, “Multiresolution gray-scale and rotation invariant texture classification with local binary patterns,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 24, no. 7, pp. 971–987, 2002.
+4. R. M. Haralick, K. Shanmugam and I. Dinstein, “Textural features for image classification,” IEEE Trans. Syst., Man, Cybern., vol. SMC-3, no. 6, pp. 610–621, 1973.
+5. L. Breiman, “Random forests,” Machine Learning, vol. 45, no. 1, pp. 5–32, 2001.
+6. B. Efron, “Bootstrap methods: another look at the jackknife,” Ann. Statist., vol. 7, no. 1, pp. 1–26, 1979.
+7. J. W. Cooley and J. W. Tukey, “An algorithm for the machine calculation of complex Fourier series,” Math. Comp., vol. 19, no. 90, pp. 297–301, 1965.
+8. R. C. Gonzalez and R. E. Woods, Digital Image Processing, 4th ed. Pearson, 2018.
+9. I. Loshchilov and F. Hutter, “Decoupled weight decay regularization,” Proc. ICLR, 2019.
+10. D. A. J. Brion and S. W. Pattinson, “Generalisable 3D printing error detection and correction via multi-head neural networks,” Nature Communications, vol. 13, 4654, 2022.
+11. F. Pedregosa et al., “Scikit-learn: Machine learning in Python,” J. Mach. Learn. Res., vol. 12, pp. 2825–2830, 2011.
+12. A. Paszke et al., “PyTorch: An imperative style, high-performance deep learning library,” Proc. NeurIPS, 2019.
+13. Kaggle, “Early detection of 3D printing issues” competition, https://www.kaggle.com/competitions/early-detection-of-3d-printing-issues, accessed 24 Oct 2026.
 
 ## Licence
 

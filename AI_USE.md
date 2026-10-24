@@ -252,3 +252,38 @@ section was copied from the CSVs in `results/`.
   checked against the original publications before submission.
 - An earlier draft said the results came from an "Intel CPU"; the CPU vendor
   was never checked, so it was changed to "Windows laptop CPU".
+
+---
+
+## 2026-10-25: Licence record, references, subset reproduction
+
+**Task.** Record the data terms, replace the references with a list supplied
+by the student, and add a script that rebuilds `data/train_subset.csv`.
+
+**What the AI did**
+- `data/README.md` licence section, from the student's reading of the Rules
+  tab (accessed 25 Oct 2026): no formal data licence; common sense, no
+  cheating, prize winners open-source code; Kaggle Terms of Use apply;
+  non-commercial academic use; no images redistributed.
+- Replaced the README references with the student's exact list of 13 and
+  added in-text citations (methods, related work, data).
+- `fdm_defect.data.make_subset` and `scripts/make_subset.py` implement the
+  student's description of how the subset was made (sort by `img_path`, group
+  by `print_id`, `np.linspace(0, n-1, min(120, n)).round()`, `np.unique`,
+  concatenate in `print_id` order); `--check` compares with the committed file.
+- 11 new tests (205 total), including a real-data test that rebuilds the
+  subset from `data/raw/train.csv`.
+
+**What was kept / changed.** All kept. The procedure is the student's; the AI
+implemented and verified it.
+
+**How it was checked**
+- The rebuilt subset equals `data/train_subset.csv` as a DataFrame and the
+  written CSV is byte-identical (`cmp`); `make_subset.py --check` reports OK.
+- Hand-computed positions: n = 10, k = 4 gives [0, 3, 6, 9]; k = 5 gives
+  [0, 2, 4, 7, 9], confirming `np.round` sends 4.5 to 4 (half to even).
+- Shuffled input gives the same subset; prints with fewer than 120 frames are
+  kept whole.
+
+**AI errors found.** None. The references in the previous entry, written from
+the AI's knowledge, are superseded by the student's list.
