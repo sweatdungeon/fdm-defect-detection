@@ -218,3 +218,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+# Dataset: raw images and downloaded archives must never be committed
+data/raw/
+*.zip
