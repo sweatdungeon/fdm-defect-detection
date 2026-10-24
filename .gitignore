@@ -221,3 +221,8 @@ __marimo__/
 # Dataset: raw images and downloaded archives must never be committed
 data/raw/
 *.zip
+
+# Trained model weights (reproducible with the training scripts)
+models/
+*.pt
+*.pth
