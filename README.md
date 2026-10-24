@@ -45,6 +45,17 @@ x = load_images(train["path"].head(8), size=128)          # (8, 128, 128, 3) flo
 The split is by print, not by image: consecutive frames of one print are
 near-duplicates and share a label, so an image-level split would leak.
 
+### Baseline
+
+43 hand-crafted NumPy features per image (`fdm_defect.features`: grey
+histogram, RGB mean/std, Sobel gradients, uniform LBP, GLCM, FFT periodicity)
+feed a logistic regression or random forest (`fdm_defect.baseline`). Train
+both and score on the validation split with:
+
+```bash
+python scripts/run_baseline.py        # writes results/baseline_val.csv
+```
+
 ## Tests
 
 ```bash
