@@ -213,3 +213,42 @@ feature extraction; JPEG decoding is excluded for all models.
   the feature cache, which NumPy will not load without pickle. The crash was
   hidden because the shell pipe reported grep's exit code; fixed the dtype and
   reran with `pipefail`.
+
+---
+
+## 2026-10-25: README, data README, API docs and test report
+
+**Task.** Write the README following the brief, fill in `data/README.md`,
+generate pdoc HTML docs and a pytest HTML report.
+
+**What the AI did**
+- Rewrote `README.md`: engineering problem and requirements, input/output
+  tables with formats, units and domains, invalid-input handling table, setup,
+  workflow, methods, validation (test inventory), results tables copied from
+  `results/`, interpretation, limitations, references.
+- Wrote `data/README.md`: source, download, metadata format, image format,
+  verified dataset statistics, subset construction, split.
+- `scripts/build_docs.py` builds `docs/` with pdoc (NumPy docstring format);
+  `results/test_report.html` generated with pytest-html (194 passed).
+- Converted two reStructuredText tables in module docstrings to Markdown
+  tables, because pdoc rendered them as raw text.
+
+**What was kept / changed.** All kept. Every number in the README results
+section was copied from the CSVs in `results/`.
+
+**How it was checked**
+- Inspected the rendered pdoc pages: `:func:` cross-references become links;
+  the two RST tables did not render, so they were converted.
+- Scanned the generated HTML and all committed files for local paths.
+
+**AI errors found / things left open**
+- pdoc printed the absolute paths in `fdm_defect.config` (including the local
+  Windows user folder) into `docs/`. Caught before committing;
+  `build_docs.py` strips the machine-specific prefix.
+- The dataset licence could not be retrieved (the Kaggle rules page requires a
+  signed-in account); `data/README.md` contains a TODO for the owner to copy
+  it from the competition's Rules tab. The AI did not guess the licence.
+- The README references were written from the AI's knowledge and should be
+  checked against the original publications before submission.
+- An earlier draft said the results came from an "Intel CPU"; the CPU vendor
+  was never checked, so it was changed to "Windows laptop CPU".
