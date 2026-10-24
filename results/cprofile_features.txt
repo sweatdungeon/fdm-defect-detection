@@ -1,0 +1,33 @@
+         25858 function calls in 0.109 seconds
+
+   Ordered by: cumulative time
+   List reduced from 97 to 25 due to restriction <25>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    0.109    0.109 run_pipeline.py:304(<lambda>)
+       64    0.002    0.000    0.108    0.002 features.py:386(extract_features)
+     2432    0.033    0.000    0.033    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+       64    0.000    0.000    0.027    0.000 features.py:125(colour_stats)
+       64    0.001    0.000    0.021    0.000 features.py:234(lbp_histogram)
+      128    0.000    0.000    0.020    0.000 {method 'std' of 'numpy.ndarray' objects}
+      128    0.001    0.000    0.020    0.000 _methods.py:217(_std)
+       64    0.007    0.000    0.020    0.000 features.py:202(lbp_uniform)
+      128    0.006    0.000    0.020    0.000 _methods.py:148(_var)
+       64    0.005    0.000    0.018    0.000 features.py:176(gradient_features)
+       64    0.003    0.000    0.017    0.000 features.py:329(fft_features)
+       64    0.000    0.000    0.011    0.000 _pocketfft.py:1019(fft2)
+       64    0.000    0.000    0.011    0.000 _pocketfft.py:741(_raw_fftnd)
+       64    0.000    0.000    0.011    0.000 features.py:103(grey_histogram)
+      384    0.000    0.000    0.010    0.000 {method 'mean' of 'numpy.ndarray' objects}
+      704    0.000    0.000    0.010    0.000 {method 'sum' of 'numpy.ndarray' objects}
+      128    0.000    0.000    0.010    0.000 _pocketfft.py:120(fft)
+      128    0.010    0.000    0.010    0.000 _pocketfft.py:58(_raw_fft)
+      384    0.001    0.000    0.010    0.000 _methods.py:115(_mean)
+      704    0.000    0.000    0.010    0.000 _methods.py:47(_sum)
+       64    0.006    0.000    0.009    0.000 _histograms_impl.py:685(histogram)
+       64    0.006    0.000    0.008    0.000 features.py:246(glcm)
+       64    0.008    0.000    0.008    0.000 features.py:142(sobel)
+      128    0.002    0.000    0.005    0.000 features.py:53(_check_rgb)
+      320    0.001    0.000    0.003    0.000 features.py:71(_check_grey)
+
+

@@ -1,0 +1,28 @@
+model,metric,value,unit,note
+features,time_per_image,1.4194000032148324,ms,"median of 100, 128px, excludes JPEG decode"
+all,jpeg_decode_resize_per_image,5.224050000833813,ms,"1280x720 JPEG -> 128px, same for every model"
+features,peak_memory_per_image,1.287576,MB,tracemalloc peak during one extraction
+logreg,predict_time_batch1,0.1538500036986079,ms,
+logreg,predict_time_per_image_batched,0.00023562499791296432,ms,batch of 960
+logreg,model_size,0.002494,MB,pickled
+random_forest,predict_time_batch1,25.064300003577955,ms,
+random_forest,predict_time_per_image_batched,0.036820260417395424,ms,batch of 960
+random_forest,model_size,7.431394,MB,pickled
+random_forest,parameters,91282.0,nodes,total tree nodes
+logreg,parameters,44.0,coefficients,
+cnn,predict_time_batch1,2.825650000886526,ms,14 CPU threads
+cnn,predict_time_per_image_batched,0.27981953127209636,ms,batch of 64
+cnn,parameters,1518881.0,params,
+cnn,trainable_parameters,591873.0,params,head only
+cnn,model_size,6.124244,MB,float32 params + buffers
+cnn,gflops_32px,0.004321152,GFLOP,"conv + linear, 1 MAC = 2 FLOPs"
+cnn,arithmetic_intensity_32px,0.6874610622132763,FLOP/byte,weights + activations read/written once
+cnn,gflops_64px,0.010987008,GFLOP,"conv + linear, 1 MAC = 2 FLOPs"
+cnn,arithmetic_intensity_64px,1.5678729970997154,FLOP/byte,weights + activations read/written once
+cnn,gflops_128px,0.037650432,GFLOP,"conv + linear, 1 MAC = 2 FLOPs"
+cnn,arithmetic_intensity_128px,3.8048926011907915,FLOP/byte,weights + activations read/written once
+cnn,gflops_224px,0.110974848,GFLOP,"conv + linear, 1 MAC = 2 FLOPs"
+cnn,arithmetic_intensity_224px,6.221822938590481,FLOP/byte,weights + activations read/written once
+cnn,activation_memory,1.8609,MB,"sum of conv/linear outputs, one image"
+cnn,achieved_throughput_batch1,13.324520725563133,GFLOP/s,
+cnn,achieved_throughput_batched,134.55255188526758,GFLOP/s,
