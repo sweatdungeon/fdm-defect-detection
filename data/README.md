@@ -17,14 +17,19 @@ The images may come as one large archive (`images.zip`, ~12 GB, 106,339 entries:
 
 ## Licence and terms of use
 
-> **TODO (project owner):** copy the data licence / terms of use from the
-> competition's **Rules** tab here (and the date you accepted them). It could
-> not be retrieved automatically because the page requires a signed-in Kaggle
-> account.
+*Rules tab accessed 25 October 2026.*
 
-The images are **not** redistributed in this repository: `data/raw/` and
-`*.zip` are git-ignored. Only the metadata subset `train_subset.csv` (file
-paths and labels) is committed.
+- **No formal data licence.** The competition's Rules tab does not state a
+  data licence. It asks participants to use common sense, not to cheat, and
+  requires prize winners to open-source their code.
+- **Kaggle's general [Terms of Use](https://www.kaggle.com/terms) apply** to
+  the data, as to all content obtained through Kaggle.
+- **Use in this project:** non-commercial academic coursework (MMA3001
+  individual project) only.
+- **No images are redistributed.** `data/raw/` and `*.zip` are git-ignored;
+  the repository contains only `train_subset.csv`, a list of file paths with
+  their printer, print and label, from which the images can be extracted
+  from the user's own Kaggle download.
 
 ## What is in this folder
 
@@ -32,7 +37,7 @@ paths and labels) is committed.
 |---|---|---|
 | `train_subset.csv` | yes | metadata for the 6,227-image subset used in this project |
 | `raw/images/` | no | the subset images, created by `scripts/extract_subset.py` |
-| `raw/*.csv` | no | top-level CSVs copied from the zip, if present |
+| `raw/*.csv` | no | competition CSVs (e.g. `train.csv`, for `scripts/make_subset.py` and its test) |
 | `features/` | no | cached feature matrices written by `scripts/run_pipeline.py` |
 
 ## Metadata format
@@ -87,6 +92,25 @@ intervals in this project work at the print level.
   52 prints every print matters.
 - Rationale: 120 frames span each print evenly while cutting the data from
   ~12 GB to ~750 MB, so experiments run on a laptop CPU.
+
+**Exact procedure** (`fdm_defect.data.make_subset`): sort `train.csv` by
+`img_path` (ordering each print's frames by timestamp), group by `print_id`,
+and for a print with `n` frames keep the row positions
+`np.unique(np.linspace(0, n - 1, min(120, n)).round().astype(int))`; then
+concatenate the prints in `print_id` order and reset the index. `np.round`
+rounds halves to even (4.5 → 4); the committed file depends on this.
+
+Rebuild or verify the subset from the competition's `train.csv` (the CSV or
+the Kaggle `train.csv.zip`):
+
+```bash
+python scripts/make_subset.py --train path/to/train.csv.zip --check   # verify
+python scripts/make_subset.py --train path/to/train.csv               # rebuild
+```
+
+The rebuilt file is byte-identical to the committed `train_subset.csv`
+(verified 25 October 2026). `tests/test_data.py` checks this whenever
+`data/raw/train.csv` is present.
 
 Extract the subset images from the downloaded zip (the zip does not need to be
 unpacked):
