@@ -56,6 +56,19 @@ both and score on the validation split with:
 python scripts/run_baseline.py        # writes results/baseline_val.csv
 ```
 
+### CNN
+
+`fdm_defect.cnn` fine-tunes an ImageNet-pretrained MobileNetV3-Small (or
+ResNet-18 with `--arch resnet18`) with a new single-logit head. By default
+only the head is trained and the frozen backbone's BatchNorm layers stay in
+eval mode; `--full-finetune` trains everything (use a lower `--lr`, e.g. 1e-4).
+
+```bash
+python scripts/train_cnn.py           # writes results/cnn_*.csv and models/cnn_*.pt
+```
+
+The first run downloads the ImageNet weights (~10 MB) to the torch cache.
+
 ## Tests
 
 ```bash
