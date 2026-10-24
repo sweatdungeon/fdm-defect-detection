@@ -2,16 +2,14 @@
 
 Each image is reduced to a fixed-length vector built from six groups:
 
-=====================  =========  =============================================
-group                  length     what it captures
-=====================  =========  =============================================
-grey histogram         hist_bins  overall brightness distribution
-RGB mean / std         6          filament and bed colour
-Sobel gradients        5          edge strength and direction, edge density
-uniform LBP histogram  10         local micro-texture
-GLCM statistics        4          grey-level co-occurrence texture
-2-D FFT periodicity    2          how regular the bead stripes are
-=====================  =========  =============================================
+| group | length | what it captures |
+|---|---|---|
+| grey histogram | hist_bins | overall brightness distribution |
+| RGB mean / std | 6 | filament and bed colour |
+| Sobel gradients | 5 | edge strength and direction, edge density |
+| uniform LBP histogram | 10 | local micro-texture |
+| GLCM statistics | 4 | grey-level co-occurrence texture |
+| 2-D FFT periodicity | 2 | how regular the bead stripes are |
 
 Under-extrusion shows up as thinner, gapped beads, so it should change edge
 density, texture and periodicity. All functions take float images in [0, 1],

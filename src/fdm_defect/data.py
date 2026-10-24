@@ -2,15 +2,12 @@
 
 The metadata CSV has one row per image with columns
 
-========================  =====  ==============================================
-column                    type   meaning
-========================  =====  ==============================================
-``img_path``              str    ``<printer_id>/<print_id>/<unix_timestamp>.jpg``,
-                                 relative to the image folder
-``printer_id``            int    printer that made the print (e.g. 22, 101)
-``print_id``              int    print the frame belongs to
-``has_under_extrusion``   int    label: 1 = under-extrusion, 0 = good
-========================  =====  ==============================================
+| column | type | meaning |
+|---|---|---|
+| ``img_path`` | str | ``<printer_id>/<print_id>/<unix_timestamp>.jpg``, relative to the image folder |
+| ``printer_id`` | int | printer that made the print (e.g. 22, 101) |
+| ``print_id`` | int | print the frame belongs to |
+| ``has_under_extrusion`` | int | label: 1 = under-extrusion, 0 = good |
 
 Every frame of a print carries the same label, and consecutive frames are
 near-duplicates, so the independent unit is the *print*, not the image. The
