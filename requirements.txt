@@ -1,0 +1,16 @@
+# Exact versions used for the results in this repo (Python 3.12).
+# Install with:  pip install -r requirements.txt
+# Version ranges for the package itself are in pyproject.toml.
+
+# Runtime
+numpy==2.5.4
+pandas==3.1.0
+pillow==13.0.0
+
+# Development: tests, HTML test report, API docs
+pytest==9.1.1
+pytest-html==4.2.0
+pdoc==16.0.0
+
+# This package, in editable mode
+-e .
