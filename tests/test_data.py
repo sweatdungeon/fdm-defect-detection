@@ -12,6 +12,7 @@ from fdm_defect.data import (
     load_image,
     load_images,
     load_metadata,
+    make_subset,
     print_table,
     split_by_print,
     validate_metadata,
@@ -263,8 +264,77 @@ def test_check_no_print_leakage_detects_overlap(valid_df):
 
 
 # --------------------------------------------------------------------------
+# make_subset
+# --------------------------------------------------------------------------
+
+
+def frames(print_id, n, printer_id=22, label=0):
+    """Metadata for one print with n frames, timestamps 0..n-1."""
+    return pd.DataFrame({
+        "img_path": [f"{printer_id:03d}/{print_id}/{print_id + t}.000000.jpg" for t in range(n)],
+        "printer_id": printer_id,
+        "print_id": print_id,
+        "has_under_extrusion": label,
+    })
+
+
+def timestamps(subset, print_id):
+    rows = subset[subset["print_id"] == print_id]
+    return [int(p.split("/")[-1].split(".")[0]) - print_id for p in rows["img_path"]]
+
+
+def test_make_subset_evenly_spaced_known_positions():
+    # n = 10, k = 4: linspace(0, 9, 4) = [0, 3, 6, 9].
+    assert timestamps(make_subset(frames(1000, 10), frames_per_print=4), 1000) == [0, 3, 6, 9]
+
+
+def test_make_subset_rounds_half_to_even():
+    # n = 10, k = 5: linspace(0, 9, 5) = [0, 2.25, 4.5, 6.75, 9] -> [0, 2, 4, 7, 9];
+    # np.round sends 4.5 to 4 (half to even), which the committed subset relies on.
+    assert timestamps(make_subset(frames(1000, 10), frames_per_print=5), 1000) == [0, 2, 4, 7, 9]
+
+
+def test_make_subset_keeps_short_prints_whole():
+    out = make_subset(pd.concat([frames(1000, 3), frames(2000, 200)]), frames_per_print=120)
+    assert timestamps(out, 1000) == [0, 1, 2]
+    assert len(timestamps(out, 2000)) == 120
+    assert timestamps(out, 2000)[0] == 0 and timestamps(out, 2000)[-1] == 199  # endpoints kept
+
+
+def test_make_subset_ignores_input_order():
+    df = pd.concat([frames(2000, 30, printer_id=101), frames(1000, 25)])
+    shuffled = df.sample(frac=1, random_state=0)
+    pd.testing.assert_frame_equal(make_subset(df, 7), make_subset(shuffled, 7))
+
+
+def test_make_subset_orders_by_print_id_with_fresh_index():
+    out = make_subset(pd.concat([frames(2000, 5, printer_id=101), frames(1000, 5)]), frames_per_print=2)
+    assert list(out["print_id"]) == [1000, 1000, 2000, 2000]
+    assert list(out.index) == [0, 1, 2, 3]
+
+
+@pytest.mark.parametrize("k", [0, -1, 2.5, True])
+def test_make_subset_invalid_frames_per_print(k):
+    with pytest.raises(ValueError):
+        make_subset(frames(1000, 5), frames_per_print=k)
+
+
+def test_make_subset_missing_column():
+    with pytest.raises(ValueError, match="missing columns"):
+        make_subset(frames(1000, 5).drop(columns="print_id"))
+
+
+# --------------------------------------------------------------------------
 # Real data (skipped unless the subset images have been extracted)
 # --------------------------------------------------------------------------
+
+TRAIN_CSV = config.DATA_DIR / "raw" / "train.csv"
+
+
+@pytest.mark.skipif(not TRAIN_CSV.is_file(), reason="competition train.csv not in data/raw/")
+def test_make_subset_reproduces_committed_subset():
+    rebuilt = make_subset(pd.read_csv(TRAIN_CSV))
+    pd.testing.assert_frame_equal(rebuilt, pd.read_csv(config.SUBSET_CSV))
 
 needs_real_data = pytest.mark.skipif(
     not config.IMAGE_DIR.is_dir(), reason="real images not extracted to data/raw/images"
