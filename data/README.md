@@ -91,7 +91,7 @@ intervals in this project work at the print level.
 - Frames are sampled *within* prints; no print is dropped, because with only
   52 prints every print matters.
 - Rationale: 120 frames span each print evenly while cutting the data from
-  ~12 GB to ~750 MB, so experiments run on a laptop CPU.
+  ~12 GB to ~750 MB, so experiments run on an ordinary desktop CPU.
 
 **Exact procedure** (`fdm_defect.data.make_subset`): sort `train.csv` by
 `img_path` (ordering each print's frames by timestamp), group by `print_id`,

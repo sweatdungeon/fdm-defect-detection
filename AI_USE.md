@@ -91,10 +91,13 @@ reported. None changed a reported result after it was published.
 | 5 | The first full pipeline run crashed (pandas 3 strings saved as an object array that NumPy will not load without pickle), and **the crash was hidden** because the shell pipe reported `grep`'s exit code 0 | Claude Code read the log instead of trusting the exit code | dtype fixed; reran with `pipefail` |
 | 6 | pdoc wrote the absolute local path (including the Windows user folder) into the HTML docs | scan of generated files before committing | `scripts/build_docs.py` strips the machine-specific prefix |
 | 7 | Two reStructuredText tables in docstrings rendered as raw text in pdoc | inspection of rendered pages | converted to Markdown tables |
-| 8 | A README draft stated the results came from an "Intel CPU", which was never checked | self-review before committing | changed to "Windows laptop CPU" |
+| 8 | A README draft stated the results came from an "Intel CPU", which was never checked | self-review before committing | changed to "Windows laptop CPU", which was itself wrong (see 12) |
 | 9 | References were first written from the AI's memory and not checked against the sources | flagged by Claude Code as unverified | replaced with my verified list |
 | 10 | Figure layout problems (label collisions, a large gap between panels) | rendering and inspecting every figure | layout fixed |
 | 11 | The report script first used `DataFrame.to_markdown`, which needs an uninstalled package | self-review before running | wrote the table directly |
+| 12 | The README called the test machine a "laptop"; it is a desktop with an Intel Core i5-14600KF | I corrected it | README and `data/README.md` corrected |
+| 13 | Claude Code concluded the machine had no GPU because `torch.cuda.is_available()` was False; in fact it has an RTX 3080, and the AI had installed the CPU-only PyTorch build | I told it the hardware; `nvidia-smi` confirmed the GPU | README states the GPU was present but unused; results unchanged (all CPU) |
+| 14 | The README said the CNN was "memory-bound" at batch 1, but its working set fits in the L3 cache, so the low throughput is mainly per-layer overhead | self-review of the profiling explanation | wording qualified |
 
 **Limitations of the AI's work that remain:**
 - The colour palette for the figures could not be checked with its validator
@@ -406,4 +409,20 @@ installs and passes the tests.
 
 **How it was checked.** The docstring audit was re-run until only two nested
 helper functions (not public API) had one-line docstrings; all scripts
-compile; the fresh-clone install and test run are recorded below.
+compile; the fresh clone installed and `pytest` gave 203 passed, 2 skipped
+(the two real-data tests skip because images are not in the repository).
+
+### 2026-10-25: Hardware description corrected
+
+**Task.** Correct the README's description of the test machine after I pointed
+out it is a desktop (Intel Core i5-14600KF, NVIDIA RTX 3080), not a laptop
+without a GPU.
+
+**What the AI did**
+- Ran `nvidia-smi` (RTX 3080, 10 GB) and checked the installed PyTorch build
+  (`2.14.1+cpu`): the GPU exists but was never used.
+- Replaced "laptop CPU" in `README.md` and `data/README.md`, stated that all
+  results are CPU-only, and qualified the "memory-bound" claim (errors 12-14).
+
+**How it was checked.** I confirmed the hardware myself; no code or results
+changed, and `pytest` still passes.
