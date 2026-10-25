@@ -9,6 +9,7 @@ MMA3001 Numerical Methods and Machine Learning, individual project.
 - **API documentation:** [docs/index.html](docs/index.html) (pdoc; open locally)
 - **Test report:** [results/test_report.html](results/test_report.html)
 - **Results table:** [results/comparison.md](results/comparison.md)
+- **Dataset (Kaggle):** https://www.kaggle.com/competitions/early-detection-of-3d-printing-issues/data
 - **Data description:** [data/README.md](data/README.md)
 - **AI-use log:** [AI_USE.md](AI_USE.md)
 
@@ -107,11 +108,17 @@ python -m venv .venv
 pip install -r requirements.txt     # exact versions, installs the package in editable mode
 ```
 
-The images are not in the repository (~750 MB for the subset). Download the
-Kaggle data and extract the 6,227-image subset as described in
-[data/README.md](data/README.md):
+The images are not in the repository (~750 MB for the subset). They come from
+the Kaggle competition *Early detection of 3D printing issues*:
+
+**https://www.kaggle.com/competitions/early-detection-of-3d-printing-issues/data**
+
+Sign in to Kaggle, accept the competition rules, then download the data
+(~12 GB) from that page or with the Kaggle CLI, and extract the 6,227-image
+subset into `data/raw/` as described in [data/README.md](data/README.md):
 
 ```bash
+kaggle competitions download -c early-detection-of-3d-printing-issues
 python scripts/extract_subset.py --zip path/to/images.zip \
     --subset data/train_subset.csv --out data/raw
 ```
