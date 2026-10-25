@@ -133,7 +133,7 @@ Kaggle images.zip ────────────────────�
 
 ```bash
 python scripts/make_subset.py --train train.csv --check  # verify the subset (optional)
-python scripts/run_pipeline.py                         # everything, ~12 min on a laptop CPU
+python scripts/run_pipeline.py                         # everything, ~12 min on a desktop CPU (i5-14600KF)
 python scripts/run_pipeline.py --stages sweep report   # a subset of stages
 python scripts/make_report.py                          # rebuild table and figures from CSVs
 python scripts/run_baseline.py                         # baseline only, validation metrics
@@ -282,7 +282,11 @@ ROC-AUC (0.899) exactly; every figure was rendered and inspected.
 
 ## 7. Results
 
-All numbers below come from `results/` (one run, seed 42, Windows laptop CPU, 14 PyTorch threads).
+All numbers below come from `results/` (one run, seed 42, Windows desktop with an Intel Core i5-14600KF CPU, 14 PyTorch
+threads). The machine also has an NVIDIA RTX 3080 GPU, but it was **not used**:
+the CPU-only build of PyTorch was installed, so all training, inference and
+timing ran on the CPU. This matches the intended deployment, a monitor beside the
+printer that is unlikely to have a GPU.
 
 ### Test split: 8 prints (4 defective), 960 images
 
@@ -310,8 +314,12 @@ All numbers below come from `results/` (one run, seed 42, Windows laptop CPU, 14
 JPEG decoding and resizing (5.2 ms per 1280 × 720 frame) is excluded for every
 model. The random forest's batch-1 time is dominated by thread start-up
 (`n_jobs=-1`), not arithmetic. The CNN's arithmetic intensity is ≈ 3.8 FLOP/byte
-at 128 px (6.2 at 224 px): low, so it is **memory-bound**, which is why
-batching raises achieved throughput from 13 to 135 GFLOP/s. Feature extraction
+at 128 px (6.2 at 224 px), below this CPU's estimated machine balance of
+≈ 20 FLOP/byte, so a roofline model places it in the memory-bound region. At
+batch 1, however, the ≈ 9.9 MB working set fits in the 24 MB L3 cache, so the
+low achieved throughput (13 GFLOP/s) is mainly per-layer overhead from many
+small layers; batching amortises that overhead and raises throughput to
+135 GFLOP/s, still far below the CPU's peak compute. Feature extraction
 peaks at 1.3 MB of NumPy memory per image; cProfile shows the time split
 roughly evenly between colour statistics (25%), LBP (19%), Sobel (17%) and FFT (16%).
 
@@ -387,7 +395,9 @@ roughly evenly between colour statistics (25%), LBP (19%), Sobel (17%) and FFT (
   test-split numbers.
 - **Profiling scope.** FLOPs count only convolution and linear layers (no
   BatchNorm, activations, pooling); the baseline's FLOPs were not counted.
-  Timings are from one Windows laptop CPU and vary between runs and machines.
+  Timings are from one desktop CPU (Intel Core i5-14600KF) and vary between runs
+  and machines. GPU timings were not measured (the installed PyTorch build was
+  CPU-only, so the machine's RTX 3080 was unused).
 - **Subset.** Only up to 120 of each print's 107–4,310 frames are used; the
   held-out Kaggle test set has no labels and was not used.
 
