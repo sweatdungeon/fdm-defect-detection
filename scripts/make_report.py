@@ -37,6 +37,7 @@ GRID, AXIS, SURFACE = "#e1e0d9", "#c3c2b7", "#fcfcfb"
 
 
 def style():
+    """Set matplotlib defaults to the reference palette and recessive axes."""
     plt.rcParams.update({
         "figure.facecolor": SURFACE, "axes.facecolor": SURFACE, "savefig.facecolor": SURFACE,
         "font.family": "sans-serif", "font.sans-serif": ["Segoe UI", "DejaVu Sans"], "font.size": 9,
@@ -51,6 +52,7 @@ def style():
 
 
 def save(fig, name):
+    """Save ``fig`` as ``results/figures/<name>`` and close it."""
     FIGURES.mkdir(parents=True, exist_ok=True)
     fig.savefig(FIGURES / name, bbox_inches="tight")
     plt.close(fig)
@@ -62,6 +64,7 @@ def save(fig, name):
 
 
 def metrics_with_ci(preds, n_boot, seed):
+    """Metrics with print-level bootstrap CIs for every (model, split) in ``preds``."""
     rows = []
     for (model, split), part in preds.groupby(["model", "split"]):
         ci = bootstrap_ci(part["label"], part["proba"], part["print_id"], n_boot=n_boot, seed=seed)
@@ -76,10 +79,12 @@ def metrics_with_ci(preds, n_boot, seed):
 
 
 def fmt_ci(row):
+    """Format a metric row as ``estimate [lo, hi]``."""
     return f"{row['estimate']:.2f} [{row['lo']:.2f}, {row['hi']:.2f}]"
 
 
 def comparison_table(metrics, cv, lopo, profiling, fit_times):
+    """One row per model: test metrics with CIs, CV, LOPO and cost."""
     prof = profiling.set_index(["model", "metric"])["value"]
     test = metrics[metrics["split"] == "test"].set_index(["model", "metric"])
     rows = []
@@ -117,6 +122,7 @@ def comparison_table(metrics, cv, lopo, profiling, fit_times):
 
 
 def write_markdown(table, metrics, path):
+    """Write ``table`` with an explanatory header to ``path`` as Markdown."""
     n_boot = int(metrics["n_valid"].min())
     lines = [
         "# Model comparison",
@@ -142,6 +148,7 @@ def write_markdown(table, metrics, path):
 
 
 def fig_roc(preds):
+    """Figure: ROC curves of the three models on the test split."""
     fig, ax = plt.subplots(figsize=(4.2, 4))
     ax.plot([0, 1], [0, 1], color=MUTED, lw=0.8, ls=(0, (4, 3)))
     for model in MODELS:
@@ -157,6 +164,7 @@ def fig_roc(preds):
 
 
 def fig_sweep(sweep):
+    """Figure: validation ROC-AUC and recall against input resolution."""
     fig, axes = plt.subplots(1, 2, figsize=(8, 3.3), sharex=True)
     for ax, metric, title in [(axes[0], "roc_auc", "Validation ROC-AUC"), (axes[1], "recall", "Validation recall")]:
         for model in MODELS:
@@ -177,6 +185,7 @@ def fig_sweep(sweep):
 
 
 def condition_label(kind, level):
+    """Human-readable label for a corruption and its level."""
     if kind == "clean":
         return "Clean"
     return {"blur": f"Blur σ={level:g} px", "brightness": f"Brightness ×{level:g}",
@@ -184,6 +193,7 @@ def condition_label(kind, level):
 
 
 def fig_robustness(rob):
+    """Figure: test ROC-AUC and recall under each corruption (dot plot)."""
     rob = rob.copy()
     rob["condition"] = [condition_label(k, lv) for k, lv in zip(rob["corruption"], rob["level"])]
     order = list(dict.fromkeys(rob["condition"]))
@@ -209,6 +219,7 @@ def fig_robustness(rob):
 
 
 def fig_training(history):
+    """Figure: CNN training and validation loss per epoch, best epoch marked."""
     best = int(history["best_epoch"].iloc[0])
     fig, ax = plt.subplots(figsize=(5, 3.2))
     ax.plot(history["epoch"], history["train_loss"], color=INK_2, ls=(0, (4, 2)), marker="o",
@@ -226,6 +237,7 @@ def fig_training(history):
 
 
 def fig_cv_lopo(cv, lopo):
+    """Figure: grouped CV folds and leave-one-printer-out ROC-AUC for the baselines."""
     fig, axes = plt.subplots(1, 2, figsize=(8.5, 3.3), gridspec_kw={"width_ratios": [1, 2]})
     ax = axes[0]
     for i, model in enumerate(("logreg", "random_forest")):
@@ -264,6 +276,7 @@ def fig_cv_lopo(cv, lopo):
 
 
 def main(n_boot=2000):
+    """Build the metrics table, comparison table and all figures from the result CSVs."""
     style()
     preds = pd.read_csv(RESULTS / "predictions.csv")
     cv = pd.read_csv(RESULTS / "cv_folds.csv")

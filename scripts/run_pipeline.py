@@ -73,6 +73,7 @@ class Context:
     """Data shared by all stages: metadata, split and cached features."""
 
     def __init__(self, seed):
+        """Load and validate the metadata, make the split, and index rows by image path."""
         self.seed = seed
         self.df = load_metadata(config.SUBSET_CSV, config.IMAGE_DIR)
         self.split = split_by_print(self.df, seed=seed)
@@ -81,6 +82,7 @@ class Context:
         self._features = {}
 
     def rows(self, part):
+        """Row positions in ``self.df`` of the images in ``part``."""
         return self.row[part["img_path"]].to_numpy()
 
     def features(self, size):
@@ -96,14 +98,17 @@ class Context:
         return self._features[size]
 
     def xy(self, part, size):
+        """Feature matrix and labels for ``part`` at resolution ``size``."""
         return self.features(size)[self.rows(part)], part[LABEL_COLUMN].to_numpy()
 
 
 def log(msg):
+    """Print ``msg`` with a timestamp."""
     print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
 
 
 def stage_splits(ctx):
+    """Save the print-level split and log a per-split summary."""
     rows = []
     for name, part in zip(ctx.split._fields, ctx.split):
         t = print_table(part)
@@ -121,6 +126,7 @@ def stage_splits(ctx):
 
 
 def stage_features(ctx):
+    """Extract and cache features for every image at every sweep resolution."""
     FEATURE_DIR.mkdir(parents=True, exist_ok=True)
     timing = []
     for size in SIZES:
@@ -135,6 +141,7 @@ def stage_features(ctx):
 
 
 def prediction_frame(part, split_name, model, proba):
+    """Table of per-image predictions for one model on one split."""
     return pd.DataFrame({
         "img_path": part["img_path"].to_numpy(),
         "print_id": part["print_id"].to_numpy(),
@@ -156,6 +163,7 @@ def save_predictions(new, models):
 
 
 def stage_baseline(ctx):
+    """Fit both baselines at 128 px and save their validation and test predictions."""
     x_train, y_train = ctx.xy(ctx.split.train, MAIN_SIZE)
     preds, fits = [], []
     for name in MODEL_NAMES:
@@ -174,6 +182,7 @@ def stage_baseline(ctx):
 
 
 def train_cnn(ctx, size):
+    """Seed, build and train the head-only CNN at ``size``; return the result and seconds taken."""
     seed_everything(ctx.seed)
     model = build_model(CNN_ARCH, pretrained=True, freeze_backbone=True)
     t0 = time.perf_counter()
@@ -185,6 +194,7 @@ def train_cnn(ctx, size):
 
 
 def stage_cnn(ctx):
+    """Train the main CNN, save its weights, history and validation/test predictions."""
     result, secs = train_cnn(ctx, MAIN_SIZE)
     history = pd.DataFrame(result.history)
     history["best_epoch"] = result.best_epoch
@@ -204,6 +214,7 @@ def stage_cnn(ctx):
 
 
 def load_main_cnn():
+    """Load the CNN weights saved by the 'cnn' stage, in eval mode."""
     if not CNN_WEIGHTS.is_file():
         raise FileNotFoundError(f"{CNN_WEIGHTS} missing; run the 'cnn' stage first")
     model = build_model(CNN_ARCH, pretrained=False, freeze_backbone=True)
@@ -212,6 +223,7 @@ def load_main_cnn():
 
 
 def stage_cv(ctx):
+    """5-fold grouped CV over all prints for both baselines."""
     x, y = ctx.xy(ctx.df, MAIN_SIZE)
     folds = []
     for name in MODEL_NAMES:
@@ -224,6 +236,7 @@ def stage_cv(ctx):
 
 
 def stage_lopo(ctx):
+    """Leave-one-printer-out evaluation for both baselines."""
     x, y = ctx.xy(ctx.df, MAIN_SIZE)
     printers = ctx.df["printer_id"].to_numpy()
     prints_per_printer = ctx.df.groupby("printer_id")["print_id"].nunique()
@@ -239,6 +252,7 @@ def stage_lopo(ctx):
 
 
 def stage_sweep(ctx):
+    """Validation metrics for all three models at each sweep resolution."""
     rows = []
     for size in SIZES:
         x_train, y_train = ctx.xy(ctx.split.train, size)
@@ -259,6 +273,7 @@ def stage_sweep(ctx):
 
 
 def stage_robustness(ctx):
+    """Score the fixed models on corrupted test images, without retraining."""
     test = ctx.split.test
     y = test[LABEL_COLUMN].to_numpy()
     images = load_images(test["path"], size=MAIN_SIZE)
@@ -282,9 +297,11 @@ def stage_robustness(ctx):
 
 
 def stage_profiling(ctx):
+    """Time, profile and count FLOPs for the baselines and the CNN."""
     rows = []
 
     def add(model, metric, value, unit, note=""):
+        """Append one profiling measurement."""
         rows.append({"model": model, "metric": metric, "value": value, "unit": unit, "note": note})
 
     test = ctx.split.test
@@ -346,12 +363,14 @@ def stage_profiling(ctx):
 
 
 def stage_report(ctx):
+    """Build the tables and figures (scripts/make_report.py)."""
     import make_report  # scripts/ is on sys.path when this file is run as a script
 
     make_report.main()
 
 
 def main():
+    """Parse arguments and run the selected stages in order."""
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--stages", nargs="+", choices=STAGES, default=list(STAGES))
     ap.add_argument("--seed", type=int, default=config.DEFAULT_SEED)

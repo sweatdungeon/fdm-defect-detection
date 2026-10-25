@@ -232,6 +232,11 @@ def lbp_uniform(grey):
 def lbp_histogram(grey):
     """Normalised histogram of uniform LBP labels (see :func:`lbp_uniform`).
 
+    Parameters
+    ----------
+    grey : numpy.ndarray
+        Float array of shape ``(H, W)``, at least 3x3.
+
     Returns
     -------
     numpy.ndarray

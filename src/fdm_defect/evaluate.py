@@ -76,6 +76,7 @@ def binary_metrics(y_true, proba, threshold=0.5):
     fn = int(((pred == 0) & (y == 1)).sum())
 
     def ratio(a, b):
+        """``a / b``, or NaN when the denominator is zero (metric undefined)."""
         return a / b if b else float("nan")
 
     recall = ratio(tp, tp + fn)
@@ -139,11 +140,14 @@ def bootstrap_ci(y_true, proba, groups, n_boot=1000, ci=0.95, threshold=0.5, see
     if len(unique) < 2:
         raise ValueError("need at least two groups to bootstrap")
 
+    # Frame indices of each print, computed once rather than in every resample.
     index_of = {g: np.flatnonzero(groups == g) for g in unique}
     rng = np.random.default_rng(seed)
     samples = []
     for _ in range(n_boot):
+        # Draw prints with replacement; a print drawn twice contributes all its frames twice.
         idx = np.concatenate([index_of[g] for g in rng.choice(unique, size=len(unique))])
+        # Recall, specificity and ROC-AUC need both classes present.
         if 0 < y[idx].sum() < len(idx):
             samples.append(binary_metrics(y[idx], p[idx], threshold))
     samples = pd.DataFrame(samples, columns=list(METRIC_NAMES))

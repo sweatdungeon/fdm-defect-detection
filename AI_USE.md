@@ -350,3 +350,60 @@ summary and contribution table, consolidated error list, decisions made by
 the AI for me to review, and marked reflection sections. Commit counts taken
 from `git log`. The claude.ai section is left for me to complete, because
 Claude Code has no record of that use.
+
+### 2026-10-25: Report draft and presentation notes
+
+**Task.** Draft the 5–10 page report under the brief's 8 headings with figures
+from `results/`, a 5-minute presentation outline, and likely interview
+questions with short answers.
+
+The draft report and presentation notes were moved out of the repository by
+me; they are not part of the GitHub submission, and the report is submitted
+separately on Moodle.
+
+**What the AI did**
+- Report draft: all 8 sections plus appendices (training curve, per-print
+  test predictions, reproduction commands). Parts I must write are marked
+  `[WRITE]`; claims I must confirm are marked `[CHECK]`.
+- Added one analysis of existing results (no new experiment, test split not
+  re-scored): per-print mean probabilities on the test split, showing that the
+  CNN and random forest miss the same defective print (printer 104, CNN flags
+  32 % of its frames), and that the CNN's flag rate on another defective print
+  rises from 30 % to 100 % across the print.
+- Presentation notes: 7-slide outline with timings, 31 likely
+  questions with short answers (including the brief's example questions), and
+  a table of key numbers.
+
+**How it was checked.** Every number was taken from the CSVs in `results/`
+or computed from them. The memory-traffic split quoted in §5.4 was recomputed
+from `results/cnn_layer_flops.csv`, which corrected a first draft (6.1 / 3.7 MB
+→ 6.0 / 3.9 MB).
+
+**Open for me.** The `[WRITE]` sections (lessons, AI reflection, acceptance
+criteria), the `[CHECK]` items (aerospace claim, the Kaggle-notebook
+reference, the explanation of the hard prints, CPU machine balance), and the
+page count.
+
+### 2026-10-25: Submission check against the brief
+
+**Task.** Check the repository against the brief's GitHub requirements (README,
+HTML documentation, licence, functional main branch, inline comments and
+docstrings, tests and test report), fix gaps, and confirm a fresh clone
+installs and passes the tests.
+
+**What the AI did**
+- Audited every module and function with a script (Python `ast`). Found
+  public functions whose docstrings lacked a Parameters section (e.g.
+  `normalise`, `count_parameters`, `adjust_brightness`, `add_gaussian_noise`,
+  `jpeg_compress`) and 37 script functions without docstrings; completed the
+  NumPy-style docstrings in the package and added one-line docstrings to the
+  scripts.
+- Added intent comments to the bootstrap loop and the FLOP formula.
+- Regenerated the HTML documentation and the test report so they match the code.
+- Cloned the repository into an empty folder, installed it with
+  `pip install -r requirements.txt` in a new virtual environment, and ran
+  `pytest`.
+
+**How it was checked.** The docstring audit was re-run until only two nested
+helper functions (not public API) had one-line docstrings; all scripts
+compile; the fresh-clone install and test run are recorded below.

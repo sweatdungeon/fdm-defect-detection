@@ -57,10 +57,14 @@ def count_flops(model, input_shape=(1, 3, 128, 128)):
     rows = []
 
     def hook(module, inputs, output):
+        """Record MACs, parameters and tensor sizes of one layer during the forward pass."""
         if isinstance(module, nn.Conv2d):
             kh, kw = module.kernel_size
+            # Each output value sums over its group's input channels and the kernel
+            # window; for a depthwise conv (groups = in_channels) that is one channel.
             macs = output.numel() * (module.in_channels // module.groups) * kh * kw
         else:
+            # Each output of a linear layer is a dot product over all inputs.
             macs = output.numel() * module.in_features
         weight_values = module.weight.numel()
         rows.append({
@@ -96,6 +100,11 @@ def count_flops(model, input_shape=(1, 3, 128, 128)):
 
 def summarise_flops(layers):
     """Totals from :func:`count_flops`.
+
+    Parameters
+    ----------
+    layers : pandas.DataFrame
+        Per-layer table returned by :func:`count_flops`.
 
     Returns
     -------
@@ -174,8 +183,16 @@ def profile_function(fn, top=20, sort="cumulative"):
 def model_size_bytes(model):
     """Storage size of a model.
 
-    For a ``torch.nn.Module``: bytes of all parameters and buffers. Otherwise
-    (e.g. a scikit-learn estimator): length of its pickle.
+    Parameters
+    ----------
+    model : torch.nn.Module or object
+        For a ``torch.nn.Module``, all parameters and buffers are counted;
+        any other object (e.g. a scikit-learn estimator) is pickled.
+
+    Returns
+    -------
+    int
+        Size in bytes.
     """
     if isinstance(model, nn.Module):
         tensors = list(model.parameters()) + list(model.buffers())
@@ -184,5 +201,16 @@ def model_size_bytes(model):
 
 
 def count_parameters(model, trainable_only=False):
-    """Number of parameters of a torch model."""
+    """Number of parameters of a torch model.
+
+    Parameters
+    ----------
+    model : torch.nn.Module
+    trainable_only : bool, default False
+        Count only parameters with ``requires_grad=True``.
+
+    Returns
+    -------
+    int
+    """
     return sum(p.numel() for p in model.parameters() if p.requires_grad or not trainable_only)

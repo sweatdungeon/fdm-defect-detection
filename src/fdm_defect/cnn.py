@@ -71,6 +71,11 @@ def seed_everything(seed=config.DEFAULT_SEED):
 
     Call it *before* :func:`build_model`, since the new head's initial
     weights are random.
+
+    Parameters
+    ----------
+    seed : int, default ``config.DEFAULT_SEED``
+        Seed for ``random``, ``numpy.random`` and ``torch``.
     """
     random.seed(seed)
     np.random.seed(seed)
@@ -155,7 +160,18 @@ def set_train_mode(model):
 
 
 def normalise(x):
-    """Apply ImageNet normalisation to a ``(3, H, W)`` or ``(B, 3, H, W)`` tensor in [0, 1]."""
+    """Apply ImageNet normalisation (subtract channel mean, divide by channel std).
+
+    Parameters
+    ----------
+    x : torch.Tensor
+        Image of shape ``(3, H, W)`` or batch ``(B, 3, H, W)`` with values in [0, 1].
+
+    Returns
+    -------
+    torch.Tensor
+        Normalised tensor of the same shape, as the pretrained weights expect.
+    """
     return (x - IMAGENET_MEAN) / IMAGENET_STD
 
 
@@ -216,9 +232,11 @@ class FrameDataset(Dataset):
         self._cache = {}
 
     def __len__(self):
+        """Number of images."""
         return len(self.paths)
 
     def __getitem__(self, i):
+        """Return ``(image, label)``: a normalised ``(3, size, size)`` float32 tensor and a float 0/1 label."""
         if i not in self._cache:
             # load_image returns float32 = uint8 / 255, so this round trip is exact.
             img = np.round(load_image(self.paths[i], self.size) * 255).astype(np.uint8)

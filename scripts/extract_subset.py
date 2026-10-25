@@ -21,6 +21,7 @@ import pandas as pd
 
 
 def main() -> None:
+    """Parse arguments, copy the subset images out of the zip and report missing files."""
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--zip", required=True, help="Kaggle competition zip file")

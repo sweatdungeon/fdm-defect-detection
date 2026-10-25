@@ -26,6 +26,7 @@ CORRUPTIONS = {
 
 
 def _check_image(img):
+    """Validate a float ``(H, W, 3)`` image in [0, 1] and return it as an array."""
     img = np.asarray(img)
     if img.ndim != 3 or img.shape[2] != 3:
         raise ValueError(f"expected an (H, W, 3) image, got shape {img.shape}")
@@ -92,7 +93,25 @@ def gaussian_blur(img, sigma):
 
 
 def adjust_brightness(img, factor):
-    """Multiply all values by ``factor`` and clip to [0, 1]."""
+    """Multiply all values by ``factor`` and clip to [0, 1].
+
+    Parameters
+    ----------
+    img : numpy.ndarray
+        Float ``(H, W, 3)`` image in [0, 1].
+    factor : float
+        Multiplier, >= 0; < 1 darkens, > 1 brightens (with clipping).
+
+    Returns
+    -------
+    numpy.ndarray
+        Adjusted image, same shape and dtype.
+
+    Raises
+    ------
+    ValueError
+        If ``factor`` is negative or the image is invalid.
+    """
     img = _check_image(img)
     if factor < 0:
         raise ValueError(f"factor must be non-negative, got {factor}")
@@ -100,7 +119,27 @@ def adjust_brightness(img, factor):
 
 
 def add_gaussian_noise(img, std, rng=None):
-    """Add i.i.d. Gaussian noise with standard deviation ``std`` and clip to [0, 1]."""
+    """Add i.i.d. Gaussian noise and clip to [0, 1].
+
+    Parameters
+    ----------
+    img : numpy.ndarray
+        Float ``(H, W, 3)`` image in [0, 1].
+    std : float
+        Noise standard deviation on the [0, 1] scale, >= 0.
+    rng : numpy.random.Generator or int, optional
+        Random generator or seed, for reproducibility.
+
+    Returns
+    -------
+    numpy.ndarray
+        Noisy image, same shape and dtype.
+
+    Raises
+    ------
+    ValueError
+        If ``std`` is negative or the image is invalid.
+    """
     img = _check_image(img)
     if std < 0:
         raise ValueError(f"std must be non-negative, got {std}")
@@ -109,7 +148,25 @@ def add_gaussian_noise(img, std, rng=None):
 
 
 def jpeg_compress(img, quality):
-    """Round-trip the image through JPEG encoding at ``quality`` (1-95)."""
+    """Round-trip the image through JPEG encoding and decoding.
+
+    Parameters
+    ----------
+    img : numpy.ndarray
+        Float ``(H, W, 3)`` image in [0, 1]; quantised to 8 bits for encoding.
+    quality : int
+        PIL JPEG quality, 1-95; lower values give stronger compression artefacts.
+
+    Returns
+    -------
+    numpy.ndarray
+        Decoded image, same shape and dtype.
+
+    Raises
+    ------
+    ValueError
+        If ``quality`` is outside 1-95 or the image is invalid.
+    """
     img = _check_image(img)
     if not 1 <= quality <= 95:
         raise ValueError(f"quality must be in 1-95, got {quality}")
