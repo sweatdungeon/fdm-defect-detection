@@ -23,6 +23,7 @@ from fdm_defect.data import LABEL_COLUMN, load_metadata, split_by_print
 
 
 def main() -> None:
+    """Parse arguments, train both baselines on the train split and save validation metrics."""
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--size", type=int, default=config.DEFAULT_IMAGE_SIZE, help="image side in px")

@@ -25,6 +25,7 @@ from fdm_defect.data import make_subset
 
 
 def main() -> None:
+    """Parse arguments, build the subset, then write it or compare it with the existing file."""
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--train", required=True, help="train.csv or a zip containing only it")

@@ -25,6 +25,7 @@ from fdm_defect.data import LABEL_COLUMN, load_metadata, split_by_print
 
 
 def main() -> None:
+    """Parse arguments, train the CNN, score it on validation and save metrics, history and weights."""
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--arch", choices=ARCHS, default="mobilenet_v3_small")

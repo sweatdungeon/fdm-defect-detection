@@ -21,6 +21,7 @@ OUT = Path("docs")
 
 
 def main() -> None:
+    """Render the docs with pdoc, then strip machine-specific path prefixes."""
     if OUT.exists():
         shutil.rmtree(OUT)
     pdoc.render.configure(docformat="numpy", footer_text=f"fdm-defect {__version__}")
